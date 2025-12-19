@@ -1,0 +1,19 @@
+{
+  "name": "telemetry-taco",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lightweight telemetry tool designed to correlate Feature Usage with System Health in real-time",
+  "scripts": {
+    "dev": "pnpm --filter ./frontend dev",
+    "dev:frontend": "pnpm --filter ./frontend dev",
+    "dev:backend": "cd backend && poetry run python manage.py runserver",
+    "build": "pnpm --filter ./frontend build",
+    "build:frontend": "pnpm --filter ./frontend build",
+    "lint": "pnpm --filter ./frontend lint",
+    "lint:frontend": "pnpm --filter ./frontend lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
+

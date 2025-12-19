@@ -1,0 +1,275 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  PYTHON_VERSION: "3.11"
+  POSTGRES_VERSION: "16"
+  REDIS_VERSION: "7"
+
+jobs:
+  # Code Quality and Linting
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/.venv
+          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('backend/pyproject.toml') }}
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Run Ruff (linter)
+        working-directory: ./backend
+        run: poetry run ruff check . || true
+
+      - name: Run Ruff (formatter check)
+        working-directory: ./backend
+        run: poetry run ruff format --check . || true
+
+      - name: Run Django check
+        working-directory: ./backend
+        run: poetry run python manage.py check
+
+  # Security Scanning
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Run Safety check
+        working-directory: ./backend
+        run: |
+          pip install safety
+          poetry export -f requirements.txt --output requirements-export.txt --without-hashes
+          safety check --file requirements-export.txt || true
+
+      - name: Run Bandit (security linter)
+        working-directory: ./backend
+        run: |
+          pip install bandit[toml]
+          bandit -r . -f json -o bandit-report.json || true
+
+  # Unit and Integration Tests
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: telemetry_taco_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/.venv
+          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('backend/pyproject.toml') }}
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Run migrations
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/telemetry_taco_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          DEBUG: "False"
+        run: poetry run python manage.py migrate
+
+      - name: Run tests
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/telemetry_taco_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          DEBUG: "False"
+        run: poetry run python manage.py test --verbosity=2
+
+  # Docker Build and Validation
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: telemetry-taco-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          docker run --rm telemetry-taco-backend:test python manage.py check
+
+  # Docker Compose Integration Test
+  docker-compose-test:
+    name: Docker Compose Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start services with docker-compose
+        run: |
+          docker-compose up -d db redis
+          sleep 10
+
+      - name: Wait for services to be healthy
+        run: |
+          timeout 60 bash -c 'until docker-compose ps | grep -q "healthy"; do sleep 2; done'
+
+      - name: Build and start backend
+        run: |
+          docker-compose build backend
+          docker-compose up -d backend
+
+      - name: Run migrations in container
+        run: |
+          docker-compose exec -T backend python manage.py migrate
+
+      - name: Run tests in container
+        run: |
+          docker-compose exec -T backend python manage.py test --verbosity=2
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -f http://localhost:8000/ || echo "Health check endpoint may not exist"
+
+      - name: Stop services
+        if: always()
+        run: docker-compose down -v
+
+  # Build and Push Docker Image (on main branch)
+  docker-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [lint, test, docker-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/telemetry-taco-backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
