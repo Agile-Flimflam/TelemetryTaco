@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 10% 18%; /* #2d2d2d */
+    --foreground: 0 0% 98%;
+    --card: 217 11% 20%; /* #1F2937 */
+    --card-foreground: 0 0% 98%;
+    --popover: 217 11% 20%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 15 100% 48%; /* #f54e00 */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 48 100% 50%; /* #ffcc00 */
+    --secondary-foreground: 0 0% 9%;
+    --muted: 217 11% 20%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 217 11% 20%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217 11% 30%;
+    --input: 217 11% 30%;
+    --ring: 15 100% 48%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+  
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+}

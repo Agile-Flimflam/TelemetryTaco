@@ -1,35 +1,49 @@
-#--- General ---
-.DS_Store
-.vscode/
-.idea
-*.log
-
-#--- Environment ---
+# Environment variables
 .env
+.env.local
 .env.*.local
+# Explicitly ignore .env files in subdirectories
+backend/.env
+frontend/.env
 
-#--- Python / Django ---
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-venv/
-.venv/
+*.so
+.Python
 env/
-poetry.lock
-*sqlite3
+venv/
+ENV/
+.venv
 
-#--- Node / React ---
-node_modules/
-dist/
-build/
-.output/
-coverage/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
 
-#--- Docker ---
-.docker/
-postgres_data/
-redis_data/
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+node_modules
+
+# Development process files
+.backend.pid
+.celery.pid
+.backend.log
+.celery.log

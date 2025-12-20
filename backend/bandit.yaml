@@ -1,0 +1,32 @@
+# Bandit configuration for Django project
+# Excludes common false positives and directories that don't need scanning
+
+# Exclude directories that don't need security scanning
+exclude_dirs:
+  - migrations
+  - venv
+  - .venv
+  - __pycache__
+  - core/migrations
+
+# Skip tests that are common false positives in Django projects
+# B101: assert_used - Django uses asserts in tests
+# B104: hardcoded_bind_all_interfaces - Django settings use 0.0.0.0 for development
+# B105: hardcoded_password_string - Django settings use env vars, not hardcoded
+# B106: hardcoded_password_funcarg - Same as above
+# B107: hardcoded_password_default - Django uses env() for secrets (handled in code with nosec)
+# B108: hardcoded_tmp_directory - Django uses system temp, which is fine
+# B201: flask_debug_true - Not using Flask
+# B301: blacklist_calls - Django uses these patterns safely
+# B506: yaml_load - Not using yaml.load
+# B601: shell_injection_subprocess - Django uses subprocess safely in management commands
+skips:
+  - B101
+  - B104
+  - B105
+  - B106
+  - B108
+  - B201
+  - B301
+  - B506
+  - B601

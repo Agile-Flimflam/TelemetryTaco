@@ -1,0 +1,29 @@
+name: "CodeQL Configuration"
+
+# Configuration for CodeQL code scanning
+# This file customizes the CodeQL analysis for this repository
+
+paths:
+  # Include paths
+  - backend/
+  - frontend/
+  - sdk/
+
+paths-ignore:
+  # Exclude paths that don't need analysis
+  - "**/migrations/"
+  - "**/node_modules/"
+  - "**/__pycache__/"
+  - "**/.venv/"
+  - "**/venv/"
+  - "**/dist/"
+  - "**/build/"
+
+# Query suites to use
+# - security-extended: Includes additional security queries
+# - security-and-quality: Includes security and quality queries
+query-filters:
+  - exclude:
+      id: py/weak-cryptographic-algorithm
+      # Allow MD5 for non-cryptographic purposes (e.g., checksums)
+      reason: "MD5 is used for non-cryptographic purposes only"

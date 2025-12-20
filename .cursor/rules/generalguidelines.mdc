@@ -1,0 +1,205 @@
+---
+alwaysApply: true
+description: General Guidelines for TelemetryTaco (Django/Python + React/TypeScript)
+---
+
+# TelemetryTaco Development Guidelines
+
+## 🎯 Senior Posture & Monorepo Etiquette
+
+- **Act as a Senior Engineer**: Reason before coding. Favor small, reviewable diffs.
+- **Context Awareness**: Always be aware of whether you are in the `backend/` (Python) or `frontend/` (TypeScript) context.
+- **Communicate Intent**: Document non-obvious choices with concise comments. Explain why, not just what.
+
+---
+
+## 🎨 Frontend Defaults (React + TypeScript)
+
+### UI Stack
+
+- **Shadcn UI**: Always use Shadcn components wherever possible.
+- **Tailwind CSS**: Always style using Tailwind CSS.
+- **UX Expertise**: You are a UX expert. Prioritize developer-centric, intuitive interfaces.
+
+### Theme
+
+- **"Citrus" Theme**: Adhere to the project's brutalist/developer-tool aesthetic (Amber/Yellow/Dark Grey).
+
+### TypeScript Rigor
+
+- **Never use `any`**: Define strict interfaces or Zod schemas.
+- **No Optional Chaining for Expected Values**: If a value must exist per business logic, check explicitly. Hide no errors.
+- **Strict Null Checks**: Handle `null` and `undefined` explicitly.
+- **Type Safety**: Use TypeScript's strict mode. Leverage discriminated unions for state management.
+
+### State Management
+
+- **React Query**: Prefer React Query (or simple fetch hooks for MVP) over global state libraries unless necessary.
+- **Local State**: Use `useState` for component-local state. Use `useReducer` for complex state logic.
+
+### Error Handling
+
+- **Explicit Error Boundaries**: Implement error boundaries for graceful error handling.
+- **User Feedback**: Always provide clear error messages to users.
+
+---
+
+## 🐍 Backend Defaults (Python + Django Ninja)
+
+### Python Version & Tooling
+
+- **Python 3.11+**: Use modern Python features (type hints, dataclasses, etc.).
+- **Poetry**: Use Poetry for dependency management. Always update `pyproject.toml` and `poetry.lock`.
+
+### Type Hints
+
+- **Mandatory Type Hints**: All function arguments and return values must have type hints.
+- **Use Modern Typing**: Prefer `list[T]`, `dict[K, V]` (Python 3.9+) over `List[T]`, `Dict[K, V]`.
+- **Optional Types**: Use `Optional[T]` or `T | None` for nullable values.
+
+### Django Ninja API Design
+
+- **Pydantic Everything**: All API inputs (Schema) and outputs MUST use Pydantic models.
+- **Never Accept Raw Data**: Never accept `request.POST` or raw `dict` in API views.
+- **Schema Validation**: Define explicit Pydantic schemas for all request/response models.
+
+### Django ORM Hygiene
+
+- **No N+1 Queries**: Always use `select_related()` and `prefetch_related()` when fetching related objects.
+- **Query Optimization**: Use `only()` and `defer()` to limit fields when appropriate.
+- **Bulk Operations**: Use `bulk_create()`, `bulk_update()` for multiple records.
+
+### Architecture Patterns
+
+- **Fat Models / Service Layer**: Keep views/API endpoints thin. Put business logic in:
+  - Model methods for model-specific logic
+  - `services/` module for complex business logic
+  - Utility functions in `core/utils.py` for reusable helpers
+- **Separation of Concerns**: API endpoints should only handle HTTP concerns (validation, serialization, status codes).
+
+### Database & Performance
+
+- **JSONB Usage**: When querying `JSONField`, ensure appropriate Gin indexes are planned (even if not strictly enforced in MVP).
+- **Database Indexes**: Add indexes for frequently queried fields.
+- **Connection Pooling**: Use appropriate database connection pooling in production.
+
+### Async & Background Tasks
+
+- **Celery for Long Operations**: DB writes that take >50ms should be offloaded to Celery.
+- **Immediate Response**: API endpoints should return 200 OK immediately for ingestion tasks.
+- **Task Idempotency**: Use unique task IDs to prevent duplicate processing.
+
+### Error Handling
+
+- **Exception Handling**: Use Django's exception handling. Return appropriate HTTP status codes.
+- **Logging**: Use Python's `logging` module with appropriate log levels.
+
+---
+
+## 🛡️ Validation & Security (Full Stack)
+
+### Frontend Validation
+
+- **Zod Schemas**: All form inputs and API responses must be validated with Zod.
+- **Client-Side Validation**: Validate before submission, but never trust client-side validation alone.
+
+### Backend Validation
+
+- **Pydantic Validation**: All incoming payloads must be strictly validated before touching the DB.
+- **Input Sanitization**: Sanitize user inputs to prevent injection attacks.
+- **Rate Limiting**: Implement rate limiting for public APIs.
+
+### Security Best Practices
+
+- **Secrets Management**: Never hardcode secrets. Use:
+  - `django-environ` (Python) for backend
+  - `import.meta.env` (Vite) for frontend
+- **Environment Variables**: Store all sensitive data in `.env` files (never commit).
+- **Idempotency**: The ingestion engine must handle duplicate payloads gracefully (check UUIDs in Redis).
+- **CSRF Protection**: Always enable CSRF protection for state-changing operations.
+- **CORS Configuration**: Configure CORS appropriately for production.
+
+---
+
+## 📂 Code Reuse & File Operations
+
+### Path Handling
+
+- **Node.js**: Use `path.join()` / `path.resolve()`. No string concatenation.
+- **Python**: Use `pathlib.Path`. Avoid `os.path.join()` where possible.
+
+### Utility Functions
+
+- **Frontend Utilities**: Check `src/lib/utils.ts` before writing new helpers.
+- **Backend Utilities**: Check `backend/core/utils.py` or common service classes before creating new utilities.
+- **DRY Principle**: Don't Repeat Yourself. Extract common patterns into reusable functions.
+
+### File Organization
+
+- **Consistent Structure**: Follow Django and React conventions for file organization.
+- **Module Imports**: Use absolute imports. Keep import statements organized.
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+### Frontend Testing
+
+- **Component Tests**: Write tests for complex components and business logic.
+- **Integration Tests**: Test user flows and API interactions.
+
+### Backend Testing
+
+- **Django Test Suite**: Write tests for models, views, and business logic.
+- **API Tests**: Test all API endpoints with various input scenarios.
+- **Test Coverage**: Aim for meaningful test coverage, especially for critical paths.
+
+### Test Organization
+
+- **Test Files**: Keep tests close to the code they test.
+- **Fixtures**: Use fixtures for common test data setup.
+
+---
+
+## 🚀 Delivery Checklist
+
+Before submitting code, ensure:
+
+### Code Quality
+
+- ✅ **Linting**: Run `eslint` (Frontend) and `ruff check` (Backend).
+- ✅ **Formatting**: Run `prettier` (Frontend) and `ruff format` (Backend).
+- ✅ **Type Check**: Run `tsc --noEmit` (Frontend) and `mypy` (Backend).
+
+### Django Specific
+
+- ✅ **Django Check**: Run `python manage.py check`.
+- ✅ **Migrations**: Did you create a new model? Run `python manage.py makemigrations`.
+- ✅ **Migration Review**: Review generated migrations before committing.
+
+### Docker & Infrastructure
+
+- ✅ **Docker Health**: Ensure `docker-compose up` spins up without errors.
+- ✅ **Service Health**: Verify all services (db, redis, backend, worker) start correctly.
+- ✅ **Environment Variables**: Ensure all required environment variables are documented.
+
+### Git & CI/CD
+
+- ✅ **Commit Messages**: Write clear, descriptive commit messages.
+- ✅ **CI/CD Passes**: Ensure GitHub Actions pipeline passes before merging.
+- ✅ **No Secrets**: Verify no secrets or sensitive data is committed.
+
+### Documentation
+
+- ✅ **Code Comments**: Add comments for non-obvious logic.
+- ✅ **API Documentation**: Update API documentation if endpoints changed.
+- ✅ **README Updates**: Update README if setup or usage changed.
+
+---
+
+## 📝 Additional Notes
+
+- **Performance**: Profile code when performance is critical. Use Django Debug Toolbar in development.
+- **Monitoring**: Plan for logging and monitoring in production.
+- **Accessibility**: Consider accessibility (a11y) in frontend development.
+- **Browser Support**: Test in target browsers for frontend changes.

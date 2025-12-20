@@ -1,0 +1,35 @@
+{
+  "name": "telemetry-taco",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lightweight telemetry tool designed to correlate Feature Usage with System Health in real-time",
+  "scripts": {
+    "dev": "bash start.sh",
+    "start": "bash start.sh",
+    "stop": "bash stop.sh",
+    "dev:frontend": "pnpm --filter ./frontend dev",
+    "dev:backend": "cd backend && poetry run python manage.py runserver",
+    "dev:worker": "cd backend && poetry run celery -A core worker --loglevel=info",
+    "restart:backend": "bash restart-backend.sh",
+    "services": "docker-compose up -d db redis",
+    "services:stop": "docker-compose stop db redis",
+    "migrate": "cd backend && poetry run python manage.py migrate",
+    "seed": "bash seed.sh",
+    "seed:clean": "bash seed.sh --clean",
+    "build": "pnpm --filter ./frontend build",
+    "build:frontend": "pnpm --filter ./frontend build",
+    "lint": "pnpm --filter ./frontend lint",
+    "lint:frontend": "pnpm --filter ./frontend lint",
+    "lint:backend": "cd backend && poetry run ruff check .",
+    "format:backend": "cd backend && poetry run ruff format .",
+    "format:check:backend": "cd backend && poetry run ruff format --check .",
+    "check:backend": "cd backend && poetry run python manage.py check",
+    "validate:backend": "pnpm lint:backend && pnpm format:check:backend && pnpm check:backend",
+    "validate:frontend": "pnpm --filter ./frontend lint && pnpm --filter ./frontend type-check",
+    "validate:all": "pnpm validate:backend && pnpm validate:frontend"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
+
