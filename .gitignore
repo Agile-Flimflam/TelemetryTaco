@@ -41,3 +41,9 @@ db.sqlite3-journal
 .DS_Store
 Thumbs.db
 node_modules
+
+# Development process files
+.backend.pid
+.celery.pid
+.backend.log
+.celery.log

@@ -282,6 +282,37 @@ doc = ["markdown-include", "mkdocs", "mkdocs-material", "mkdocstrings"]
 test = ["django-stubs", "mypy (==1.7.1)", "psycopg2-binary", "pytest", "pytest-asyncio", "pytest-cov", "pytest-django", "ruff (==0.5.7)"]
 
 [[package]]
+name = "django-ratelimit"
+version = "4.1.0"
+description = "Cache-based rate-limiting for Django."
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "django-ratelimit-4.1.0.tar.gz", hash = "sha256:555943b283045b917ad59f196829530d63be2a39adb72788d985b90c81ba808b"},
+    {file = "django_ratelimit-4.1.0-py2.py3-none-any.whl", hash = "sha256:d047a31cf94d83ef1465d7543ca66c6fc16695559b5f8d814d1b51df15110b92"},
+]
+
+[[package]]
+name = "django-redis"
+version = "5.4.0"
+description = "Full featured redis cache backend for Django."
+optional = false
+python-versions = ">=3.6"
+groups = ["main"]
+files = [
+    {file = "django-redis-5.4.0.tar.gz", hash = "sha256:6a02abaa34b0fea8bf9b707d2c363ab6adc7409950b2db93602e6cb292818c42"},
+    {file = "django_redis-5.4.0-py3-none-any.whl", hash = "sha256:ebc88df7da810732e2af9987f7f426c96204bf89319df4c6da6ca9a2942edd5b"},
+]
+
+[package.dependencies]
+Django = ">=3.2"
+redis = ">=3,<4.0.0 || >4.0.0,<4.0.1 || >4.0.1"
+
+[package.extras]
+hiredis = ["redis[hiredis] (>=3,!=4.0.0,!=4.0.1)"]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.3.1"
 description = "Backport of PEP 654 (exception groups)"
@@ -801,4 +832,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11,<3.14"
-content-hash = "05f5359f3a5e2749e3b601dac807b129d9d6c2db1c7a60adb1be2b16f1af28f3"
+content-hash = "fd22b0316bcde9f4bfc27fef3cb1c0e65037b7a9128389589072bde8a6373752"

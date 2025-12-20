@@ -54,7 +54,10 @@ jobs:
       - name: Install Python dependencies (for CodeQL)
         if: matrix.language == 'python'
         working-directory: ./backend
-        run: poetry install --no-interaction --no-ansi
+        run: |
+          # Update lock file if pyproject.toml has changed
+          poetry lock --no-update 2>/dev/null || poetry lock || true
+          poetry install --no-interaction --no-ansi
 
       - name: Autobuild (Python)
         if: matrix.language == 'python'
@@ -119,7 +122,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./backend
-        run: poetry install --no-interaction --no-ansi
+        run: |
+          # Update lock file if pyproject.toml has changed
+          poetry lock --no-update 2>/dev/null || poetry lock || true
+          poetry install --no-interaction --no-ansi
 
       - name: Run Ruff (linter)
         working-directory: ./backend
@@ -213,7 +219,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./backend
-        run: poetry install --no-interaction --no-ansi
+        run: |
+          # Update lock file if pyproject.toml has changed
+          poetry lock --no-update 2>/dev/null || poetry lock || true
+          poetry install --no-interaction --no-ansi
 
       - name: Install Poetry export plugin
         run: poetry self add poetry-plugin-export
@@ -297,7 +306,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./backend
-        run: poetry install --no-interaction --no-ansi
+        run: |
+          # Update lock file if pyproject.toml has changed
+          poetry lock --no-update 2>/dev/null || poetry lock || true
+          poetry install --no-interaction --no-ansi
 
       - name: Run migrations
         working-directory: ./backend

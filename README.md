@@ -62,6 +62,48 @@ graph LR
 
 > **New to the project?** Start here! For detailed setup instructions and troubleshooting, see the sections below.
 
+### Fastest Way to Start (Recommended)
+
+After initial setup, start everything with one command:
+
+**First time setup** (make scripts executable):
+
+```bash
+chmod +x start.sh stop.sh
+```
+
+**Then start everything:**
+
+```bash
+# Option 1: Using the startup script (easiest)
+./start.sh
+
+# Option 2: Using pnpm
+pnpm start
+
+# Option 3: Using Make
+make dev
+
+# To stop all services:
+./stop.sh  # or: pnpm stop  # or: make stop
+```
+
+The startup script will:
+
+1. ✅ Start Docker services (PostgreSQL & Redis)
+2. ✅ Wait for PostgreSQL to be ready
+3. ✅ Create `.env` file if missing
+4. ✅ Run database migrations
+5. ✅ Start Django backend server (background)
+6. ✅ Start Celery worker (background)
+7. ✅ Start frontend dev server (foreground)
+
+**Access the application:**
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/api/docs
+
 ### Prerequisites
 
 - Docker & Docker Compose
@@ -69,9 +111,9 @@ graph LR
 - Poetry (for Python dependency management)
 - Node.js 18+ & pnpm (for frontend development)
 
-### Quick Setup (Docker Services + Local Development)
+### Manual Setup (Step-by-Step)
 
-This setup uses Docker for database/Redis and runs backend/frontend locally for the best development experience:
+If you prefer to start services manually or the startup script doesn't work:
 
 ```bash
 # Clone the repository
@@ -128,6 +170,37 @@ pnpm dev
 ```
 
 **Note**: For full Docker deployment (all services in containers), see `docker-compose.yml`. The above setup is recommended for local development.
+
+### Development Commands Reference
+
+After initial setup, use these commands for daily development:
+
+```bash
+# Start everything (recommended)
+./start.sh          # or: pnpm start  # or: make dev
+
+# Start individual services
+pnpm dev:frontend   # Frontend only
+pnpm dev:backend    # Backend only
+pnpm dev:worker     # Celery worker only
+pnpm services       # Docker services only
+
+# Database operations
+pnpm migrate        # Run migrations
+make migrate        # Alternative
+
+# Stop services
+./stop.sh           # or: pnpm stop  # or: make stop
+
+# View all Make commands
+make help
+```
+
+**Note**: On first run, make the scripts executable:
+
+```bash
+chmod +x start.sh stop.sh
+```
 
 ### Local Development
 
