@@ -526,7 +526,8 @@ List recent events (ordered by timestamp, descending).
 
 - **Production Default**: 10,000 requests per hour per IP address
 - **Development Default**: 1,000,000 requests per hour per IP address
-- **Configuration**: Set `RATE_LIMIT_LIST_EVENTS` environment variable
+- **Configuration**: Set `RATE_LIMIT_LIST_EVENTS` environment variable (format: `"number/period"`, e.g., `"10000/h"`, `"100/m"`, `"50000/d"`)
+- **Disable**: Set to `"0"` to disable rate limiting for this endpoint
 
 #### `GET /api/insights?lookback_minutes=60`
 
@@ -542,7 +543,8 @@ Get aggregated event counts grouped by minute for the specified lookback period.
 
 - **Production Default**: 300 requests per hour per IP address
 - **Development Default**: 1,000 requests per hour per IP address
-- **Configuration**: Set `RATE_LIMIT_GET_INSIGHTS` environment variable
+- **Configuration**: Set `RATE_LIMIT_GET_INSIGHTS` environment variable (format: `"number/period"`, e.g., `"300/h"`, `"50/m"`, `"1000/d"`)
+- **Disable**: Set to `"0"` to disable rate limiting for this endpoint
 
 ### SDK Reference
 
@@ -595,11 +597,11 @@ The project includes a GitHub Actions CI/CD pipeline (`.github/workflows/cicd.ym
 - Runs CodeQL security analysis for Python and JavaScript
 - Validates code quality (linting, formatting, type checking)
 - Runs tests for both backend and frontend
-- Validates Docker build (builds backend image once and runs `python manage.py check` to verify the image)
+- Validates Docker build (builds backend image and runs `python manage.py check` to verify the image)
+  - For pull requests: Docker build validation runs twice (once in `docker-build` job, once in `docker-build-validation` job)
+  - For pushes: Docker build validation runs once in the `docker-build` job
 - Runs Docker Compose integration tests (full stack test with PostgreSQL, Redis, and backend services)
 - Ensures all checks pass before merging
-
-The pipeline is optimized to avoid redundant builds and runs each validation step once per pipeline execution.
 
 All pull requests must pass CI/CD validation before merging.
 
