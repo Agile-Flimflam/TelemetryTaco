@@ -7,7 +7,7 @@ import globals from 'globals'
 
 export default [
   {
-    ignores: ['dist', 'node_modules', '*.config.js'],
+    ignores: ['dist', 'node_modules'],
   },
   js.configs.recommended,
   {
@@ -37,6 +37,17 @@ export default [
         { allowConstantExport: true },
       ],
       '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
+  {
+    files: ['**/*.config.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: globals.node,
+    },
+    rules: {
+      ...js.configs.recommended.rules,
     },
   },
 ]

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -18,17 +19,48 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Initialize environment variables
 env = environ.Env(
-    DEBUG=(bool, False)
+    DEBUG=(bool, True)  # Default to True for development safety
 )
 
 # Read .env file if it exists
 environ.Env.read_env(BASE_DIR / '.env')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-me-in-production')
-
 # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG defaults to True for local development convenience.
+# Explicitly set DEBUG=False in production environment.
 DEBUG = env('DEBUG', default=True)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# In production (DEBUG=False), SECRET_KEY must be explicitly set via environment variable.
+# No default is provided to prevent accidental deployment with insecure keys.
+if DEBUG:
+    # Development: Allow default for convenience, but warn if using default
+    SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-only-change-me-in-production')
+    if SECRET_KEY == 'django-insecure-dev-only-change-me-in-production':
+        import warnings
+        warnings.warn(
+            "Using default SECRET_KEY in development. Set SECRET_KEY environment variable for production.",
+            UserWarning
+        )
+else:
+    # Production: Require explicit SECRET_KEY, raise error if not set
+    # Check if SECRET_KEY is explicitly set in environment
+    if 'SECRET_KEY' not in os.environ:
+        raise ValueError(
+            "SECRET_KEY must be explicitly set via environment variable in production. "
+            "Set the SECRET_KEY environment variable before setting DEBUG=False. "
+            "This is a security requirement to prevent accidental deployment with insecure keys."
+        )
+    
+    # Get the SECRET_KEY and validate it's not the insecure default
+    secret_key = env('SECRET_KEY')
+    if secret_key == 'django-insecure-change-me-in-production' or secret_key == 'django-insecure-dev-only-change-me-in-production':
+        raise ValueError(
+            "SECRET_KEY cannot use the default insecure value in production. "
+            "Generate a secure secret key and set it via the SECRET_KEY environment variable. "
+            "You can generate one using: python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'"
+        )
+    SECRET_KEY = secret_key
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '0.0.0.0'])
 
@@ -131,11 +163,35 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
+# In development, allow all localhost origins for flexibility
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    # Allow all localhost origins in development
+    CORS_ALLOW_ALL_ORIGINS = False  # Explicitly set to False for security
+else:
+    # Production: Only allow specific origins
+    CORS_ALLOWED_ORIGINS = env.list(
+        'CORS_ALLOWED_ORIGINS',
+        default=[]
+    )
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Celery Configuration
 CELERY_BROKER_URL = env('REDIS_URL', default='redis://localhost:6379/0')

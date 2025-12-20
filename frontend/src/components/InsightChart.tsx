@@ -15,7 +15,8 @@ interface InsightDataPoint {
   count: number
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Use relative URL in development (Vite proxy) or explicit URL from env
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8000')
 
 interface InsightChartProps {
   lookbackMinutes?: number
@@ -30,9 +31,13 @@ export function InsightChart({ lookbackMinutes = 60 }: InsightChartProps) {
     const fetchInsights = async () => {
       try {
         setLoading(true)
-        const response = await fetch(
-          `${API_BASE_URL}/api/insights?lookback_minutes=${lookbackMinutes}`
-        )
+        const url = `${API_BASE_URL}/api/insights?lookback_minutes=${lookbackMinutes}`
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
@@ -40,7 +45,13 @@ export function InsightChart({ lookbackMinutes = 60 }: InsightChartProps) {
         setData(result)
         setError(null)
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch insights'))
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : 'Failed to fetch insights'
+        const detailedError = err instanceof TypeError && err.message.includes('fetch')
+          ? new Error(`${errorMessage}. Is the backend server running on port 8000?`)
+          : new Error(errorMessage)
+        setError(detailedError)
       } finally {
         setLoading(false)
       }

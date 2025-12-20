@@ -1,7 +1,23 @@
 import { useState, useEffect } from 'react'
 
+/**
+ * Represents a JSON-serializable value.
+ * This type ensures type safety while allowing flexible event properties.
+ */
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[]
+
+/**
+ * Event properties are a flexible JSON object that can contain
+ * any JSON-serializable values (strings, numbers, booleans, null, objects, arrays).
+ */
 interface EventProperties {
-  [key: string]: unknown
+  [key: string]: JsonValue
 }
 
 export interface Event {
@@ -14,7 +30,8 @@ export interface Event {
   created_at: string
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Use relative URL in development (Vite proxy) or explicit URL from env
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '' : 'http://localhost:8000')
 
 export function useEventStream() {
   const [events, setEvents] = useState<Event[]>([])
@@ -24,7 +41,13 @@ export function useEventStream() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/events`)
+        const url = `${API_BASE_URL}/api/events`
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
@@ -32,7 +55,13 @@ export function useEventStream() {
         setEvents(data)
         setError(null)
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch events'))
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : 'Failed to fetch events'
+        const detailedError = err instanceof TypeError && err.message.includes('fetch')
+          ? new Error(`${errorMessage}. Is the backend server running on port 8000?`)
+          : new Error(errorMessage)
+        setError(detailedError)
       } finally {
         setLoading(false)
       }

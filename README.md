@@ -2,12 +2,12 @@
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)
 ![Django](https://img.shields.io/badge/django-5.0+-green.svg)
 ![React](https://img.shields.io/badge/react-18.2.0-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.3.3-3178c6.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)
+![Poetry](https://img.shields.io/badge/poetry-2.2+-orange.svg)
 
 **Lightweight, high-performance telemetry tool designed to correlate Feature Usage with System Health in real-time**
 
@@ -60,30 +60,74 @@ graph LR
 
 ## 🚀 Quick Start
 
+> **New to the project?** Start here! For detailed setup instructions and troubleshooting, see the sections below.
+
 ### Prerequisites
 
 - Docker & Docker Compose
-- Python 3.11+ (for local development)
+- Python 3.11 or 3.12 (for local development)
+- Poetry (for Python dependency management)
 - Node.js 18+ & pnpm (for frontend development)
 
-### Docker Deployment (Recommended)
+### Quick Setup (Docker Services + Local Development)
+
+This setup uses Docker for database/Redis and runs backend/frontend locally for the best development experience:
 
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/TelemetryTaco.git
 cd TelemetryTaco
 
-# Start all services
-docker-compose up -d
+# 1. Start database and Redis services
+docker-compose up -d db redis
 
-# Run migrations
-docker-compose exec backend python manage.py migrate
+# 2. Wait 5-10 seconds for PostgreSQL to initialize, then verify:
+docker-compose ps db  # Should show "Up" and "healthy"
+
+# 3. Set up backend (in backend/ directory)
+cd backend
+poetry env use python3.11  # Required if you have Python 3.14+
+poetry install
+
+# 4. Create .env file with database credentials
+# Check your Docker container credentials first:
+# docker-compose exec db env | grep POSTGRES
+cat > .env << 'EOF'
+DEBUG=True
+SECRET_KEY=django-insecure-dev-only-change-me-in-production
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco
+REDIS_URL=redis://localhost:6379/0
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+EOF
+# Update DATABASE_URL if your Docker container uses different credentials
+
+# 5. Test database connection
+poetry run python check_db.py
+
+# 6. Run migrations
+poetry run python manage.py migrate
+
+# 7. Start backend server
+poetry run python manage.py runserver
+# Backend will be available at http://localhost:8000
+
+# 8. In another terminal, start Celery worker
+cd backend
+poetry run celery -A core worker --loglevel=info
+
+# 9. In another terminal, start frontend
+cd frontend
+pnpm install
+pnpm dev
+# Frontend will be available at http://localhost:5173
 
 # Access the application
 # Frontend: http://localhost:5173
 # Backend API: http://localhost:8000
 # API Docs: http://localhost:8000/api/docs
 ```
+
+**Note**: For full Docker deployment (all services in containers), see `docker-compose.yml`. The above setup is recommended for local development.
 
 ### Local Development
 
@@ -92,11 +136,36 @@ docker-compose exec backend python manage.py migrate
 ```bash
 cd backend
 
+# Configure Poetry to use Python 3.11 (required if you have Python 3.14+)
+poetry env use python3.11
+# Or specify full path: poetry env use /opt/homebrew/bin/python3.11
+
 # Install dependencies with Poetry
 poetry install
 
 # Set up environment variables
-cp .env.example .env  # Edit as needed
+# Create .env file in backend/ directory
+cat > .env << 'EOF'
+DEBUG=True
+SECRET_KEY=django-insecure-dev-only-change-me-in-production
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco
+REDIS_URL=redis://localhost:6379/0
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+EOF
+
+# Note: If your Docker PostgreSQL uses different credentials, update DATABASE_URL accordingly.
+# Check your Docker container: docker-compose exec db env | grep POSTGRES
+
+# Start database and Redis (from project root)
+cd ..
+docker-compose up -d db redis
+
+# Wait 5-10 seconds for PostgreSQL to initialize, then verify:
+docker-compose ps db
+
+# Test database connection
+cd backend
+poetry run python check_db.py
 
 # Run migrations
 poetry run python manage.py migrate
@@ -105,8 +174,11 @@ poetry run python manage.py migrate
 poetry run python manage.py runserver
 
 # In another terminal, start Celery worker
+cd backend
 poetry run celery -A core worker --loglevel=info
 ```
+
+**Troubleshooting**: If you encounter database connection issues, see [Backend Setup Guide](backend/SETUP.md) for detailed troubleshooting steps.
 
 #### Frontend Setup
 
@@ -117,13 +189,23 @@ cd frontend
 pnpm install
 
 # Start development server
+# The Vite dev server is configured to proxy /api/* requests to http://localhost:8000
 pnpm dev
 ```
+
+The frontend will be available at `http://localhost:5173` and will automatically proxy API requests to the backend.
 
 ### Using the SDK
 
 ```python
+# Option 1: Direct import (for development)
+import sys
+sys.path.insert(0, 'path/to/TelemetryTaco/sdk')
 from telemetry_taco import TelemetryTaco
+
+# Option 2: Install as package (recommended)
+# pip install -e ./sdk
+# from telemetry_taco import TelemetryTaco
 
 # Initialize client
 client = TelemetryTaco(base_url="http://localhost:8000")
@@ -141,6 +223,11 @@ client.capture(
         }
     }
 )
+
+# Use context manager to ensure events are sent before exit
+with TelemetryTaco(base_url="http://localhost:8000") as client:
+    client.capture(distinct_id="user_123", event_name="page_view")
+    # Events are automatically flushed on exit
 ```
 
 ---
@@ -316,6 +403,18 @@ Get aggregated event counts grouped by minute.
 
 ### SDK Reference
 
+The Python SDK is located in `sdk/telemetry_taco.py`. To use it:
+
+```python
+# Import from the SDK file
+import sys
+sys.path.insert(0, 'path/to/TelemetryTaco/sdk')
+from telemetry_taco import TelemetryTaco
+
+# Or install it as a package (recommended for production)
+# pip install -e ./sdk
+```
+
 See [SDK Documentation](sdk/telemetry_taco.py) for full API reference.
 
 ### Development Guidelines
@@ -326,12 +425,78 @@ See [`.cursor/rules/generalguidelines.mdc`](.cursor/rules/generalguidelines.mdc)
 - Backend development standards (Django + Django Ninja)
 - Code quality and testing requirements
 
+### Troubleshooting
+
+#### Database Connection Issues
+
+If you see "password authentication failed" errors:
+
+1. **Check Docker PostgreSQL is running:**
+
+   ```bash
+   docker-compose ps db
+   ```
+
+2. **Verify database credentials:**
+
+   ```bash
+   docker-compose exec db env | grep POSTGRES
+   ```
+
+3. **Update `.env` file** in `backend/` with correct credentials:
+
+   ```bash
+   # The DATABASE_URL should match the credentials from step 2
+   # Format: postgresql://USER:PASSWORD@localhost:5432/telemetry_taco
+   ```
+
+4. **Test connection using the diagnostic script:**
+   ```bash
+   cd backend
+   poetry run python check_db.py
+   ```
+
+For more detailed troubleshooting, see [Backend Setup Guide](backend/SETUP.md).
+
+#### Python Version Issues
+
+If Poetry fails with Python version errors:
+
+1. **Check your Python version:**
+
+   ```bash
+   python3 --version
+   ```
+
+2. **Configure Poetry to use Python 3.11:**
+
+   ```bash
+   cd backend
+   poetry env use python3.11
+   # Or: poetry env use /opt/homebrew/bin/python3.11
+   ```
+
+3. **Reinstall dependencies:**
+   ```bash
+   poetry install
+   ```
+
+#### Frontend Connection Issues
+
+If you see "Failed to fetch" errors in the browser:
+
+1. **Verify backend is running** on `http://localhost:8000`
+2. **Check Vite proxy configuration** in `frontend/vite.config.ts`
+3. **Verify CORS settings** in `backend/telemetry_taco/settings.py`
+4. **Restart frontend dev server** after backend changes
+
 ---
 
 ## 🛠️ Tech Stack
 
 ### Backend
 
+- **Python 3.11 or 3.12** - Runtime (Python 3.14+ not supported)
 - **Django 5.0** - Web framework
 - **Django Ninja** - Fast, type-safe API framework
 - **Celery** - Distributed task queue

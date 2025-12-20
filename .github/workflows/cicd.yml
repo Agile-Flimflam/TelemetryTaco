@@ -45,11 +45,11 @@ jobs:
 
       - name: Run Ruff (linter)
         working-directory: ./backend
-        run: poetry run ruff check . || true
+        run: poetry run ruff check .
 
       - name: Run Ruff (formatter check)
         working-directory: ./backend
-        run: poetry run ruff format --check . || true
+        run: poetry run ruff format --check .
 
       - name: Run Django check
         working-directory: ./backend
@@ -87,13 +87,13 @@ jobs:
         run: |
           pip install safety
           poetry export -f requirements.txt --output requirements-export.txt --without-hashes
-          safety check --file requirements-export.txt || true
+          safety check --file requirements-export.txt
 
       - name: Run Bandit (security linter)
         working-directory: ./backend
         run: |
           pip install bandit[toml]
-          bandit -r . -f json -o bandit-report.json || true
+          bandit -r . -f json -o bandit-report.json
 
   # Unit and Integration Tests
   test:
@@ -241,7 +241,7 @@ jobs:
   docker-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: [lint, test, docker-build]
+    needs: [lint, test, security, docker-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout code

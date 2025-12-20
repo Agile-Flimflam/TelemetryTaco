@@ -16,7 +16,8 @@ RUN pip install --no-cache-dir poetry
 RUN poetry config virtualenvs.create false
 
 # Copy Poetry files
-COPY pyproject.toml poetry.lock* /app/
+# poetry.lock is required for reproducible builds
+COPY pyproject.toml poetry.lock /app/
 
 # Install dependencies
 RUN poetry install --no-interaction --no-ansi
