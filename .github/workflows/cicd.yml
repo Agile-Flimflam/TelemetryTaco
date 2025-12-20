@@ -45,8 +45,8 @@ jobs:
 
       - name: Run Ruff (linter)
         working-directory: ./backend
-        # --format=github creates inline annotations visible in PR "Files changed" tab
-        run: poetry run ruff check --format=github .
+        # --output-format=github creates inline annotations visible in PR "Files changed" tab
+        run: poetry run ruff check --output-format=github .
 
       - name: Run Ruff (formatter check)
         working-directory: ./backend
@@ -94,7 +94,19 @@ jobs:
         working-directory: ./backend
         run: |
           pip install bandit[toml]
-          bandit -r . -f json -o bandit-report.json
+          # Use .bandit config file to skip false positives
+          # Generate JSON report for artifact upload
+          bandit -r . -f json -o bandit-report.json -c .bandit
+          # Also show human-readable summary
+          bandit -r . -c .bandit
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-security-report
+          path: backend/bandit-report.json
+          retention-days: 7
 
   # Unit and Integration Tests
   test:

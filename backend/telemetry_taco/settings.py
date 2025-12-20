@@ -36,7 +36,7 @@ DEBUG = env('DEBUG', default=True)
 # No default is provided to prevent accidental deployment with insecure keys.
 if DEBUG:
     # Development: Allow default for convenience, but warn if using default
-    SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-only-change-me-in-production')
+    SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-only-change-me-in-production')  # nosec B107
     if SECRET_KEY == 'django-insecure-dev-only-change-me-in-production':
         import warnings
         warnings.warn(
