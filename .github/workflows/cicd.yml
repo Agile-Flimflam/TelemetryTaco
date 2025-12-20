@@ -32,6 +32,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
+          config-file: ./.github/codeql-config.yml
           # If you wish to specify custom queries, you can do so here or in a config file.
           # By default, queries listed here will override any specified in a config file.
           # For more details, see: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/customizing-code-scanning#using-queries-in-ql-packs
@@ -69,7 +70,7 @@ jobs:
         if: matrix.language == 'javascript'
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9
 
       - name: Set up Node.js (for CodeQL)
         if: matrix.language == 'javascript'
@@ -91,11 +92,17 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
+          upload: true
+          output: ${{ runner.temp }}/codeql-results
 
   # Code Quality and Linting
   lint:
     name: Code Quality Checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -202,6 +209,10 @@ jobs:
   security:
     name: Security Scanning
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -477,14 +488,16 @@ jobs:
           # Use a one-off container for migrations (more reliable than exec)
           docker compose run --rm -e SECRET_KEY="$SECRET_KEY" backend python manage.py migrate
 
-      - name: Start backend service
-        run: docker compose up -d backend
-
       - name: Run tests in container
         env:
           SECRET_KEY: ci-test-secret-key-for-docker-compose-test-only-not-for-production-use-this-is-a-long-key-to-meet-validation-requirements
         run: |
-          docker compose exec -T -e SECRET_KEY="$SECRET_KEY" backend python manage.py test --verbosity=2
+          # Use a one-off container for tests to avoid memory conflicts with running services
+          # This prevents OOM (exit code 137) issues when running tests
+          docker compose run --rm -e SECRET_KEY="$SECRET_KEY" backend python manage.py test --verbosity=2
+
+      - name: Start backend service
+        run: docker compose up -d backend
 
       - name: Health check
         run: |
