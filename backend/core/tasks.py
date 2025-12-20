@@ -15,8 +15,8 @@ def process_event_task(event_data: dict[str, Any]) -> None:
         event_data: Dictionary containing distinct_id, event_name, and properties
     """
     # Validate required fields
-    distinct_id = event_data.get('distinct_id')
-    event_name = event_data.get('event_name')
+    distinct_id = event_data.get("distinct_id")
+    event_name = event_data.get("event_name")
 
     if not distinct_id:
         raise ValueError("Missing required field: 'distinct_id'")
@@ -26,6 +26,6 @@ def process_event_task(event_data: dict[str, Any]) -> None:
     Event.objects.create(
         distinct_id=distinct_id,
         event_name=event_name,
-        properties=event_data.get('properties', {}),
-        timestamp=event_data.get('timestamp', timezone.now()),
+        properties=event_data.get("properties", {}),
+        timestamp=event_data.get("timestamp", timezone.now()),
     )

@@ -24,30 +24,31 @@ env = environ.Env(
 )
 
 # Read .env file if it exists
-environ.Env.read_env(BASE_DIR / '.env')
+environ.Env.read_env(BASE_DIR / ".env")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG defaults to True for local development convenience.
 # Explicitly set DEBUG=False in production environment.
-DEBUG = env('DEBUG', default=True)
+DEBUG = env("DEBUG", default=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # In production (DEBUG=False), SECRET_KEY must be explicitly set via environment variable.
 # No default is provided to prevent accidental deployment with insecure keys.
 if DEBUG:
     # Development: Allow default for convenience, but warn if using default
-    SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-only-change-me-in-production')  # nosec B107
-    if SECRET_KEY == 'django-insecure-dev-only-change-me-in-production':
+    SECRET_KEY = env("SECRET_KEY", default="django-insecure-dev-only-change-me-in-production")  # nosec B107
+    if SECRET_KEY == "django-insecure-dev-only-change-me-in-production":
         import warnings
+
         warnings.warn(
             "Using default SECRET_KEY in development. Set SECRET_KEY environment variable for production.",
             UserWarning,
-            stacklevel=2
+            stacklevel=2,
         )
 else:
     # Production: Require explicit SECRET_KEY, raise error if not set
     # Check if SECRET_KEY is explicitly set in environment
-    if 'SECRET_KEY' not in os.environ:
+    if "SECRET_KEY" not in os.environ:
         raise ValueError(
             "SECRET_KEY must be explicitly set via environment variable in production. "
             "Set the SECRET_KEY environment variable before setting DEBUG=False. "
@@ -55,8 +56,11 @@ else:
         )
 
     # Get the SECRET_KEY and validate it's not the insecure default
-    secret_key = env('SECRET_KEY')
-    if secret_key == 'django-insecure-change-me-in-production' or secret_key == 'django-insecure-dev-only-change-me-in-production':
+    secret_key = env("SECRET_KEY")
+    if (
+        secret_key == "django-insecure-change-me-in-production"
+        or secret_key == "django-insecure-dev-only-change-me-in-production"
+    ):
         raise ValueError(
             "SECRET_KEY cannot use the default insecure value in production. "
             "Generate a secure secret key and set it via the SECRET_KEY environment variable. "
@@ -64,62 +68,60 @@ else:
         )
     SECRET_KEY = secret_key
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '0.0.0.0'])
-
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "0.0.0.0"])
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'corsheaders',
-    'core',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "corsheaders",
+    "core",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'telemetry_taco.urls'
+ROOT_URLCONF = "telemetry_taco.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'telemetry_taco.wsgi.application'
+WSGI_APPLICATION = "telemetry_taco.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db(
-        'DATABASE_URL',
-        default='postgresql://postgres:postgres@localhost:5432/telemetry_taco'
+    "default": env.db(
+        "DATABASE_URL", default="postgresql://postgres:postgres@localhost:5432/telemetry_taco"
     )
 }
 
@@ -129,16 +131,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -146,9 +148,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -158,12 +160,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS Configuration
 # In development, allow all localhost origins for flexibility
@@ -178,29 +180,25 @@ if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = False  # Explicitly set to False for security
 else:
     # Production: Only allow specific origins
-    CORS_ALLOWED_ORIGINS = env.list(
-        'CORS_ALLOWED_ORIGINS',
-        default=[]
-    )
+    CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
 
 # Celery Configuration
-CELERY_BROKER_URL = env('REDIS_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = env('REDIS_URL', default='redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = env("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
-

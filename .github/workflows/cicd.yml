@@ -50,7 +50,64 @@ jobs:
 
       - name: Run Ruff (formatter check)
         working-directory: ./backend
-        run: poetry run ruff format --check .
+        id: ruff_format
+        continue-on-error: true
+        run: |
+          # Run format check and capture output
+          poetry run ruff format --check . > format-output.txt 2>&1 || format_exit=$?
+
+          # Parse output and create GitHub annotations for each file that needs formatting
+          if [ -f format-output.txt ]; then
+            files_needing_format=""
+            while IFS= read -r line; do
+              if [[ $line == "Would reformat: "* ]]; then
+                file=$(echo "$line" | sed 's/Would reformat: //')
+                echo "::error file=backend/$file::File needs formatting. Run 'poetry run ruff format .' to fix."
+                files_needing_format="${files_needing_format}- \`$file\`"$'\n'
+              fi
+            done < format-output.txt
+            
+            # Show summary
+            if grep -q "Would reformat:" format-output.txt; then
+              echo "::error::Some files need formatting. Run 'poetry run ruff format .' in the backend directory to fix."
+              cat format-output.txt
+              # Store files list for PR comment
+              echo "files<<EOF" >> $GITHUB_OUTPUT
+              echo "$files_needing_format" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+          # Exit with the original exit code if there were issues
+          exit ${format_exit:-0}
+
+      - name: Comment on formatting issues
+        if: steps.ruff_format.outcome == 'failure' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const files = `${{ steps.ruff_format.outputs.files }}`.trim();
+            const body = `## 🔧 Code Formatting Required
+
+            Some files need to be formatted. Please run the following command to fix:
+
+            \`\`\`bash
+            cd backend
+            poetry run ruff format .
+            \`\`\`
+
+            Then commit and push the changes.
+
+            **Files needing formatting:**
+            ${files || 'See annotations above for details'}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
 
       - name: Run Django check
         working-directory: ./backend

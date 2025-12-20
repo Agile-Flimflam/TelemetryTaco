@@ -14,6 +14,7 @@ router = Router()
 
 class EventSchema(Schema):
     """Pydantic schema for event capture endpoint."""
+
     distinct_id: str
     event_name: str
     properties: dict[str, Any] = {}
@@ -21,6 +22,7 @@ class EventSchema(Schema):
 
 class EventResponseSchema(Schema):
     """Pydantic schema for event response."""
+
     id: int
     distinct_id: str
     event_name: str
@@ -36,11 +38,13 @@ class EventResponseSchema(Schema):
 
 class StatusResponse(Schema):
     """Response schema for successful event capture."""
+
     status: str = "ok"
 
 
 class InsightDataPoint(Schema):
     """Schema for a single insight data point."""
+
     time: str
     count: int
 
@@ -70,7 +74,7 @@ def list_events(request, limit: int = 100):
 
     Returns the most recent events ordered by timestamp (descending).
     """
-    events = Event.objects.order_by('-timestamp')[:limit]
+    events = Event.objects.order_by("-timestamp")[:limit]
     return list(events)
 
 
@@ -94,25 +98,18 @@ def get_insights(request, lookback_minutes: int = 60):
     # Database-level aggregation: group by minute and count events
     # This is optimized as it happens entirely in the database
     aggregated = (
-        Event.objects
-        .filter(timestamp__gte=cutoff_time)
-        .annotate(
-            minute=TruncMinute('timestamp')
-        )
-        .values('minute')
-        .annotate(count=Count('id'))
-        .order_by('minute')
+        Event.objects.filter(timestamp__gte=cutoff_time)
+        .annotate(minute=TruncMinute("timestamp"))
+        .values("minute")
+        .annotate(count=Count("id"))
+        .order_by("minute")
     )
 
     # Format the results
     result = []
     for item in aggregated:
         # Format time as HH:MM
-        time_str = item['minute'].strftime('%H:%M')
-        result.append({
-            'time': time_str,
-            'count': item['count']
-        })
+        time_str = item["minute"].strftime("%H:%M")
+        result.append({"time": time_str, "count": item["count"]})
 
     return result
-
