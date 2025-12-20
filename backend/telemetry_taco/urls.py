@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from ninja import NinjaAPI
+
 from core.api import router
 
 api = NinjaAPI(title="TelemetryTaco API", version="1.0.0")

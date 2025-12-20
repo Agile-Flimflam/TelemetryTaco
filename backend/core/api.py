@@ -1,11 +1,13 @@
-from ninja import Router, Schema
-from typing import Any
 from datetime import datetime, timedelta
+from typing import Any
+
 from django.db.models import Count
 from django.db.models.functions import TruncMinute
 from django.utils import timezone
-from core.tasks import process_event_task
+from ninja import Router, Schema
+
 from core.models import Event
+from core.tasks import process_event_task
 
 router = Router()
 
@@ -47,16 +49,16 @@ class InsightDataPoint(Schema):
 def capture_event(request, event: EventSchema) -> StatusResponse:
     """
     Capture event endpoint.
-    
+
     Accepts event data and offloads it to Celery for async processing.
     Returns immediately with 200 OK to ensure low latency.
     """
     # Convert Pydantic model to dict for Celery task
     event_data = event.dict()
-    
+
     # Offload to Celery task asynchronously
     process_event_task.delay(event_data)
-    
+
     # Return immediately without waiting for DB write
     return StatusResponse(status="ok")
 
@@ -65,7 +67,7 @@ def capture_event(request, event: EventSchema) -> StatusResponse:
 def list_events(request, limit: int = 100):
     """
     List recent events endpoint.
-    
+
     Returns the most recent events ordered by timestamp (descending).
     """
     events = Event.objects.order_by('-timestamp')[:limit]
@@ -76,19 +78,19 @@ def list_events(request, limit: int = 100):
 def get_insights(request, lookback_minutes: int = 60):
     """
     Get event insights endpoint.
-    
+
     Returns aggregated event counts grouped by minute for the specified lookback period.
     Uses database-level aggregation for optimal performance.
-    
+
     Args:
         lookback_minutes: Number of minutes to look back from now (default: 60)
-    
+
     Returns:
         List of data points with time (HH:MM format) and count
     """
     # Calculate the cutoff time
     cutoff_time = timezone.now() - timedelta(minutes=lookback_minutes)
-    
+
     # Database-level aggregation: group by minute and count events
     # This is optimized as it happens entirely in the database
     aggregated = (
@@ -101,7 +103,7 @@ def get_insights(request, lookback_minutes: int = 60):
         .annotate(count=Count('id'))
         .order_by('minute')
     )
-    
+
     # Format the results
     result = []
     for item in aggregated:
@@ -111,6 +113,6 @@ def get_insights(request, lookback_minutes: int = 60):
             'time': time_str,
             'count': item['count']
         })
-    
+
     return result
 

@@ -10,8 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
+
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -40,7 +41,8 @@ if DEBUG:
         import warnings
         warnings.warn(
             "Using default SECRET_KEY in development. Set SECRET_KEY environment variable for production.",
-            UserWarning
+            UserWarning,
+            stacklevel=2
         )
 else:
     # Production: Require explicit SECRET_KEY, raise error if not set
@@ -63,6 +65,7 @@ else:
     SECRET_KEY = secret_key
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '0.0.0.0'])
+
 
 
 # Application definition

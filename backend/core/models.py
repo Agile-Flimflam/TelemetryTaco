@@ -1,11 +1,12 @@
 import uuid
+
 from django.db import models
 from django.utils import timezone
 
 
 class Event(models.Model):
     """Event model for storing telemetry events with flexible JSONB properties."""
-    
+
     distinct_id = models.CharField(max_length=255, db_index=True, help_text="User ID")
     event_name = models.CharField(max_length=255)
     properties = models.JSONField(default=dict, blank=True, help_text="Flexible JSONB field for event properties")

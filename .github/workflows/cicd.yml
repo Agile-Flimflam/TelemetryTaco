@@ -45,7 +45,8 @@ jobs:
 
       - name: Run Ruff (linter)
         working-directory: ./backend
-        run: poetry run ruff check .
+        # --format=github creates inline annotations visible in PR "Files changed" tab
+        run: poetry run ruff check --format=github .
 
       - name: Run Ruff (formatter check)
         working-directory: ./backend
