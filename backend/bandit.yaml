@@ -1,6 +1,13 @@
-[bandit]
+# Bandit configuration for Django project
+# Excludes common false positives and directories that don't need scanning
+
 # Exclude directories that don't need security scanning
-exclude_dirs = migrations,venv,.venv,__pycache__,core/migrations
+exclude_dirs:
+  - migrations
+  - venv
+  - .venv
+  - __pycache__
+  - core/migrations
 
 # Skip tests that are common false positives in Django projects
 # B101: assert_used - Django uses asserts in tests
@@ -13,4 +20,13 @@ exclude_dirs = migrations,venv,.venv,__pycache__,core/migrations
 # B301: blacklist_calls - Django uses these patterns safely
 # B506: yaml_load - Not using yaml.load
 # B601: shell_injection_subprocess - Django uses subprocess safely in management commands
-skips = B101,B104,B105,B106,B108,B201,B301,B506,B601
+skips:
+  - B101
+  - B104
+  - B105
+  - B106
+  - B108
+  - B201
+  - B301
+  - B506
+  - B601

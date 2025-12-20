@@ -53,7 +53,7 @@ else:
             "Set the SECRET_KEY environment variable before setting DEBUG=False. "
             "This is a security requirement to prevent accidental deployment with insecure keys."
         )
-    
+
     # Get the SECRET_KEY and validate it's not the insecure default
     secret_key = env('SECRET_KEY')
     if secret_key == 'django-insecure-change-me-in-production' or secret_key == 'django-insecure-dev-only-change-me-in-production':

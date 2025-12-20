@@ -10,12 +10,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry (pinned version for supply-chain security)
-# Using official installer script with explicit version pinning
+# Using pip install instead of curl-pipe pattern for integrity verification
+# pip automatically verifies package checksums from PyPI
 ENV POETRY_VERSION=1.8.3
-ENV POETRY_HOME=/opt/poetry
+ENV POETRY_NO_INTERACTION=1
+ENV POETRY_VIRTUALENVS_CREATE=false
 ENV POETRY_CACHE_DIR=/opt/poetry-cache
-ENV PATH="$POETRY_HOME/bin:$PATH"
-RUN curl -sSL https://install.python-poetry.org | python3 - \
+RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}" \
     && poetry --version
 
 # Configure Poetry: Don't create virtual environment, install dependencies to system

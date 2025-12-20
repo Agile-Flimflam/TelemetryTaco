@@ -94,11 +94,11 @@ jobs:
         working-directory: ./backend
         run: |
           pip install bandit[toml]
-          # Use .bandit config file to skip false positives
+          # Use bandit.yaml config file to skip false positives
           # Generate JSON report for artifact upload
-          bandit -r . -f json -o bandit-report.json -c .bandit
+          bandit -r . -f json -o bandit-report.json -c bandit.yaml
           # Also show human-readable summary
-          bandit -r . -c .bandit
+          bandit -r . -c bandit.yaml
 
       - name: Upload Bandit report
         if: always()
