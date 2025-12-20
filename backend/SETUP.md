@@ -26,28 +26,36 @@
 
 4. **Set up environment variables:**
 
-   Create a `.env` file in the `backend/` directory with the following content:
+   First, generate a secure SECRET_KEY:
 
    ```bash
-   # Create .env file
+   python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+   ```
+
+   Copy the generated key, then create a `.env` file in the `backend/` directory:
+
+   ```bash
+   # Create .env file (replace YOUR_SECRET_KEY with the generated key)
    cat > backend/.env << 'EOF'
    DEBUG=True
-   SECRET_KEY=django-insecure-dev-only-change-me-in-production
+   SECRET_KEY=YOUR_SECRET_KEY
    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco
    REDIS_URL=redis://localhost:6379/0
    ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
    EOF
    ```
 
-   Or manually create `backend/.env` with:
+   Or manually create `backend/.env` with (replace `YOUR_SECRET_KEY` with the generated key):
 
    ```
    DEBUG=True
-   SECRET_KEY=django-insecure-dev-only-change-me-in-production
+   SECRET_KEY=YOUR_SECRET_KEY
    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco
    REDIS_URL=redis://localhost:6379/0
    ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
    ```
+
+   **Important:** The SECRET_KEY must be a secure, randomly generated value. The application will fail to start if you use example or insecure values.
 
 5. **Start the database (if using Docker):**
 
@@ -163,22 +171,30 @@ poetry run python check_db.py
 
 If you prefer to use a local PostgreSQL installation:
 
-1. **Create/update `.env` file** with your actual credentials:
+1. **Generate a secure SECRET_KEY:**
 
    ```bash
    cd backend
+   python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+   ```
+
+   Copy the generated key.
+
+2. **Create/update `.env` file** with your actual credentials:
+
+   ```bash
    cat > .env << 'EOF'
    DEBUG=True
-   SECRET_KEY=django-insecure-dev-only-change-me-in-production
+   SECRET_KEY=YOUR_SECRET_KEY
    DATABASE_URL=postgresql://YOUR_USER:YOUR_PASSWORD@localhost:5432/telemetry_taco
    REDIS_URL=redis://localhost:6379/0
    ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
    EOF
    ```
 
-   Replace `YOUR_USER` and `YOUR_PASSWORD` with your actual PostgreSQL credentials.
+   Replace `YOUR_SECRET_KEY` with the generated key, and `YOUR_USER` and `YOUR_PASSWORD` with your actual PostgreSQL credentials.
 
-2. **Create the database** (if it doesn't exist):
+3. **Create the database** (if it doesn't exist):
 
    ```bash
    createdb telemetry_taco
@@ -186,13 +202,13 @@ If you prefer to use a local PostgreSQL installation:
    psql -U postgres -c "CREATE DATABASE telemetry_taco;"
    ```
 
-3. **Test the connection:**
+4. **Test the connection:**
 
    ```bash
    poetry run python check_db.py
    ```
 
-4. **Run migrations:**
+5. **Run migrations:**
    ```bash
    poetry run python manage.py migrate
    ```

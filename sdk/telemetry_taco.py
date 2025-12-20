@@ -16,8 +16,9 @@ class TelemetryTaco:
     TelemetryTaco SDK for capturing events.
     
     This SDK sends events to the TelemetryTaco backend in a non-blocking manner
-    using background threads. Threads are non-daemon to prevent data loss on exit.
-    Use flush() or the context manager to ensure all events are sent before program exit.
+    using background threads. Threads are daemon threads to prevent the program
+    from hanging if network operations get stuck. Use flush() or the context manager
+    to ensure all events are sent before program exit.
     
     Logging:
         The SDK uses Python's logging module. Configure the logger using:
@@ -46,6 +47,7 @@ class TelemetryTaco:
         self.capture_url = f"{self.base_url}/api/capture"
         self._active_threads: list[threading.Thread] = []
         self._threads_lock = threading.Lock()
+        self._flush_timeout = 5.0  # Default timeout for flush operations
     
     def capture(
         self,
@@ -57,8 +59,9 @@ class TelemetryTaco:
         Capture an event in a background thread.
         
         This method runs the HTTP POST request in a separate thread, ensuring
-        it doesn't block the main application thread. The thread is non-daemon
-        to prevent data loss on program exit. Use flush() to wait for completion.
+        it doesn't block the main application thread. The thread is a daemon thread
+        to prevent program hanging. Use flush() or the context manager to ensure
+        events are sent before program exit.
         
         Args:
             distinct_id: Unique identifier for the user/entity
@@ -68,12 +71,13 @@ class TelemetryTaco:
         if properties is None:
             properties = {}
         
-        # Create a non-daemon thread to handle the HTTP request
-        # Non-daemon threads ensure events are sent before program exit
+        # Create a daemon thread to handle the HTTP request
+        # Daemon threads prevent the program from hanging if network operations get stuck
+        # Use flush() or context manager to ensure events are sent before program exit
         thread = threading.Thread(
             target=self._send_event_with_cleanup,
             args=(distinct_id, event_name, properties),
-            daemon=False  # Non-daemon to prevent data loss on exit
+            daemon=True  # Daemon to prevent program hanging on exit
         )
         
         with self._threads_lock:
@@ -187,22 +191,30 @@ class TelemetryTaco:
         sending their events. Use this before program exit to ensure no data loss.
         
         Args:
-            timeout: Maximum total time to wait in seconds (None = wait indefinitely)
+            timeout: Maximum total time to wait in seconds.
+                    Defaults to 5.0 seconds if None. Set to 0 for no timeout.
                     This is a total timeout across all threads, not per thread.
         
         Raises:
             TimeoutError: If timeout is exceeded and threads are still active
         """
+        # Use default timeout if not specified
+        if timeout is None:
+            timeout = self._flush_timeout
+        
         # Make a copy of active threads to avoid modification during iteration
         with self._threads_lock:
             threads_to_wait = list(self._active_threads)
         
+        if not threads_to_wait:
+            return  # No threads to wait for
+        
         # Track start time for total timeout calculation
-        start_time = time.time() if timeout is not None else None
+        start_time = time.time() if timeout > 0 else None
         
         for thread in threads_to_wait:
             # Calculate remaining timeout for this thread
-            if timeout is not None and start_time is not None:
+            if timeout > 0 and start_time is not None:
                 elapsed = time.time() - start_time
                 remaining_timeout = timeout - elapsed
                 
@@ -215,7 +227,7 @@ class TelemetryTaco:
                         f"{remaining_count} threads still active."
                     )
             else:
-                remaining_timeout = None
+                remaining_timeout = None if timeout == 0 else timeout
             
             # Join with remaining timeout (or None if no timeout specified)
             thread.join(timeout=remaining_timeout)

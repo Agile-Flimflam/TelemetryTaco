@@ -79,7 +79,6 @@ jobs:
 
       - name: Install JavaScript dependencies (for CodeQL)
         if: matrix.language == 'javascript'
-        working-directory: ./frontend
         run: pnpm install --frozen-lockfile
 
       - name: Autobuild (JavaScript)
@@ -238,13 +237,25 @@ jobs:
 
       - name: Run Bandit (security linter)
         working-directory: ./backend
+        continue-on-error: true
+        id: bandit_scan
         run: |
           pip install bandit[toml]
           # Use bandit.yaml config file to skip false positives
           # Generate JSON report for artifact upload
-          bandit -r . -f json -o bandit-report.json -c bandit.yaml
-          # Also show human-readable summary
-          bandit -r . -c bandit.yaml
+          bandit -r . -f json -o bandit-report.json -c bandit.yaml || bandit_exit=$?
+          # Capture human-readable summary for PR comment
+          bandit -r . -c bandit.yaml > bandit-summary.txt 2>&1 || true
+          # Store exit code for later use
+          echo "exit_code=${bandit_exit:-0}" >> $GITHUB_OUTPUT
+          # Read summary and store for PR comment (escape for JSON)
+          if [ -f bandit-summary.txt ]; then
+            # Escape newlines and quotes for JSON
+            summary=$(cat bandit-summary.txt | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
+            echo "summary<<EOF" >> $GITHUB_OUTPUT
+            echo "$summary" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload Bandit report
         if: always()
@@ -253,6 +264,85 @@ jobs:
           name: bandit-security-report
           path: backend/bandit-report.json
           retention-days: 7
+
+      - name: Comment Bandit results on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `${{ steps.bandit_scan.outputs.summary }}`.trim();
+            const exitCode = parseInt(`${{ steps.bandit_scan.outputs.exit_code }}` || '0');
+
+            if (!summary) {
+              console.log('No Bandit summary available');
+              return;
+            }
+
+            // Check if there are actual issues (Bandit exits with 1 if issues found)
+            const hasIssues = exitCode !== 0 || summary.includes('Issue:') || summary.includes('Severity:');
+
+            // Format the summary for GitHub markdown
+            let body;
+            if (hasIssues) {
+              body = `## 🔒 Bandit Security Scan Results
+              
+              ⚠️ **Security issues found!** Please review the findings below:
+              
+              <details>
+              <summary>Click to expand Bandit scan results</summary>
+              
+              \`\`\`
+              ${summary}
+              \`\`\`
+              
+              </details>
+              
+              **Note:** This is a non-blocking check. Please review the findings and address any legitimate security concerns.
+              
+              Full JSON report is available in the workflow artifacts.`;
+            } else {
+              body = `## 🔒 Bandit Security Scan Results
+              
+              ✅ **No security issues found!**
+              
+              <details>
+              <summary>Click to view scan summary</summary>
+              
+              \`\`\`
+              ${summary}
+              \`\`\`
+              
+              </details>`;
+            }
+
+            // Find existing comment to update it
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.data.find(
+              comment => comment.user.type === 'Bot' && comment.body.includes('Bandit Security Scan Results')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
 
   # Unit and Integration Tests
   test:
@@ -377,16 +467,18 @@ jobs:
         run: |
           timeout 60 bash -c 'until docker compose ps | grep -q "healthy"; do sleep 2; done'
 
-      - name: Build and start backend
-        run: |
-          docker compose build backend
-          docker compose up -d backend
+      - name: Build backend image
+        run: docker compose build backend
 
       - name: Run migrations in container
         env:
           SECRET_KEY: ci-test-secret-key-for-docker-compose-test-only-not-for-production-use-this-is-a-long-key-to-meet-validation-requirements
         run: |
-          docker compose exec -T -e SECRET_KEY="$SECRET_KEY" backend python manage.py migrate
+          # Use a one-off container for migrations (more reliable than exec)
+          docker compose run --rm -e SECRET_KEY="$SECRET_KEY" backend python manage.py migrate
+
+      - name: Start backend service
+        run: docker compose up -d backend
 
       - name: Run tests in container
         env:

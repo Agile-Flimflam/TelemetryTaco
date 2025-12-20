@@ -51,6 +51,8 @@ SECRET_KEY = env("SECRET_KEY")
 
 # Validate that SECRET_KEY is not using any known insecure defaults
 # This prevents accidental use of example/insecure values
+# Note: start.sh now generates secure keys, but we keep these in the list to catch
+# manually set insecure values or values from old .env files
 insecure_defaults = [
     "django-insecure-change-me-in-production",
     "django-insecure-dev-only-change-me-in-production",

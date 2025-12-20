@@ -40,9 +40,20 @@ echo -e "${GREEN}✅ PostgreSQL is ready${NC}"
 # Step 2: Check if backend .env exists
 if [ ! -f "backend/.env" ]; then
     echo -e "${YELLOW}⚠️  backend/.env not found. Creating from template...${NC}"
-    cat > backend/.env << 'EOF'
+    
+    # Generate a secure SECRET_KEY for development
+    # Use Python to generate a Django-compatible secret key
+    if command -v python3 &> /dev/null; then
+        SECRET_KEY=$(python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())" 2>/dev/null || \
+                     python3 -c "import secrets; print(secrets.token_urlsafe(50))")
+    else
+        # Fallback: generate a random string if Python is not available
+        SECRET_KEY=$(openssl rand -hex 32 2>/dev/null || date +%s | sha256sum | base64 | head -c 50)
+    fi
+    
+    cat > backend/.env << EOF
 DEBUG=True
-SECRET_KEY=django-insecure-dev-only-change-me-in-production
+SECRET_KEY=${SECRET_KEY}
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco
 REDIS_URL=redis://localhost:6379/0
 ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
@@ -80,40 +91,49 @@ echo -e "\n${GREEN}🚀 Starting development servers...${NC}\n"
 echo -e "${YELLOW}📝 Note: This will start services in the background.${NC}"
 echo -e "${YELLOW}   Use 'pnpm stop' or './stop.sh' to stop all services.${NC}\n"
 
+# Get absolute path to project root for PID files
+# This ensures consistency regardless of where the script is run from
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_PID_FILE="${PROJECT_ROOT}/.backend.pid"
+CELERY_PID_FILE="${PROJECT_ROOT}/.celery.pid"
+BACKEND_LOG_FILE="${PROJECT_ROOT}/.backend.log"
+CELERY_LOG_FILE="${PROJECT_ROOT}/.celery.log"
+
 # Start backend in background
 echo -e "${GREEN}▶️  Starting Django backend server...${NC}"
 cd backend
-poetry run python manage.py runserver > ../.backend.log 2>&1 &
+poetry run python manage.py runserver > "${BACKEND_LOG_FILE}" 2>&1 &
 BACKEND_PID=$!
-echo $BACKEND_PID > ../.backend.pid
+echo $BACKEND_PID > "${BACKEND_PID_FILE}"
 cd ..
 
 # Start Celery worker in background
 echo -e "${GREEN}▶️  Starting Celery worker...${NC}"
 cd backend
-poetry run celery -A core worker --loglevel=info > ../.celery.log 2>&1 &
+poetry run celery -A core worker --loglevel=info > "${CELERY_LOG_FILE}" 2>&1 &
 CELERY_PID=$!
-echo $CELERY_PID > ../.celery.pid
+echo $CELERY_PID > "${CELERY_PID_FILE}"
 cd ..
 
 # Start frontend
 echo -e "${GREEN}▶️  Starting frontend dev server...${NC}"
 echo -e "${YELLOW}   Frontend will run in the foreground. Press Ctrl+C to stop.${NC}\n"
 
-# Save PIDs for cleanup
-echo $BACKEND_PID > .backend.pid
-echo $CELERY_PID > .celery.pid
-
 # Function to cleanup on exit
 cleanup() {
     echo -e "\n${YELLOW}🛑 Stopping services...${NC}"
-    if [ -f .backend.pid ]; then
-        kill $(cat .backend.pid) 2>/dev/null || true
-        rm .backend.pid
+    # Use the same absolute paths defined above
+    local project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local backend_pid_file="${project_root}/.backend.pid"
+    local celery_pid_file="${project_root}/.celery.pid"
+    
+    if [ -f "${backend_pid_file}" ]; then
+        kill $(cat "${backend_pid_file}") 2>/dev/null || true
+        rm -f "${backend_pid_file}"
     fi
-    if [ -f .celery.pid ]; then
-        kill $(cat .celery.pid) 2>/dev/null || true
-        rm .celery.pid
+    if [ -f "${celery_pid_file}" ]; then
+        kill $(cat "${celery_pid_file}") 2>/dev/null || true
+        rm -f "${celery_pid_file}"
     fi
     echo -e "${GREEN}✅ Services stopped${NC}"
 }
