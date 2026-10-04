@@ -3,10 +3,12 @@ name = "telemetry-taco-sdk"
 version = "0.1.0"
 description = "Python SDK for TelemetryTaco."
 requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Barry", email = "43803274+BarryHenryJr@users.noreply.github.com" }]
 dependencies = []
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
