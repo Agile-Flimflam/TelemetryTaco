@@ -72,3 +72,11 @@ pnpm lint && pnpm type-check && pnpm test && pnpm build
 ## Dev server
 
 `pnpm dev` serves on :5173 and proxies `/api` to `http://localhost:8000`. Set `VITE_API_URL` only when the API is on another origin.
+
+## Environment variables
+
+Vite reads `VITE_*` variables from `frontend/.env`, `frontend/.env.local` and `frontend/.env.[mode]`, never from `backend/.env`. They are baked into the bundle at build time, so they are public. Never put secrets in them.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_URL` | empty (same origin, via the dev proxy) | Base URL of the backend API when it's served from a different origin |

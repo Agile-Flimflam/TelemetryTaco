@@ -69,7 +69,7 @@ Backend and frontend tests need **no** running services. The test settings use S
 3. **Idempotency comes from `event_uuid`.** Every event carries a UUID, and the DB unique constraint plus `bulk_create(ignore_conflicts=True)` drop duplicates. Don't add a second dedup mechanism, and don't remove the UUID from any path.
 4. **Ingestion never writes to the DB in the request.** Capture endpoints validate, normalize and enqueue a Celery task, then return. Keep it that way.
 5. **The lockfiles are the source of truth.** Use `poetry add` / `pnpm add`. Don't add `requirements.txt`, `package-lock.json` or `yarn.lock`.
-6. **No secrets in the repo.** Configuration comes from environment variables (`django-environ` on the backend, `import.meta.env.VITE_*` on the frontend). Document new variables in `backend/.env.example` and the README.
+6. **No secrets in the repo.** Configuration comes from environment variables (`django-environ` on the backend, `import.meta.env.VITE_*` on the frontend). Document new backend variables in `backend/.env.example`. Frontend `VITE_*` variables are read by Vite from `frontend/.env*` (not `backend/.env`), so document those in `frontend/AGENTS.md` and the README.
 
 ## Definition of done
 
@@ -79,7 +79,7 @@ Before you call a change finished:
 - [ ] New behavior has a test. Bug fixes have a test that fails without the fix.
 - [ ] API changes: types regenerated and committed (rule 1), and the README's API section updated.
 - [ ] Model changes: `poetry run python manage.py makemigrations` was run, and the migration was read before committing.
-- [ ] New environment variables appear in `backend/.env.example`.
+- [ ] New environment variables are documented: backend ones in `backend/.env.example`, frontend `VITE_*` ones in `frontend/AGENTS.md` and the README.
 - [ ] The diff is limited to the task. Unrelated cleanup goes in its own PR.
 
 ## Things that will surprise you

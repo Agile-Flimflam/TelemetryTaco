@@ -5,7 +5,14 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 ## Design constraints
 
 - **Standard library only.** `dependencies = []` in `pyproject.toml` is deliberate, so users can drop the SDK into any app. Use `urllib`, `json` and `threading`, not `requests` or `httpx`.
-- **Never raise into the host application from the send path.** Network errors, HTTP errors and serialization errors are logged on the `telemetry_taco` logger, and the batch is dropped. Only misuse raises: an invalid `base_url`, or calling `capture()` after `close()`.
+- **The background send path never raises into the host application.** Network errors, HTTP errors and serialization errors are logged on the `telemetry_taco` logger, and the batch is dropped.
+- **What the public API can raise today:**
+  - `ValueError` from the constructor for an invalid `base_url`.
+  - `RuntimeError` from `capture()` after `close()`.
+  - `queue.Full` from `capture()` when `queue_full_policy="block"` and the queue is still full after `request_timeout`. This is a known issue (#17); the intended behavior is to log and drop.
+  - `TimeoutError` from `flush(timeout=...)` / `close(timeout=...)` when events are still unsent at the deadline.
+
+  Don't add new exceptions to this list. If you change one of them, update this section and the README.
 - **Never block the caller** unless the user chose `queue_full_policy="block"`. `capture()` only enqueues.
 - **The background worker must survive any failure.** One bad batch must not stop later batches (see `test_sdk_drops_failed_request_batch_without_killing_worker`).
 
