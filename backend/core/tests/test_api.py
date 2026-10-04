@@ -107,6 +107,89 @@ def test_capture_batch_rejects_oversized_batch(client, settings):
 
 
 @pytest.mark.django_db
+def test_capture_accepts_fields_at_the_column_limit(client):
+    response = client.post(
+        "/api/capture",
+        data={"distinct_id": "u" * 255, "event_name": "e" * 255},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert Event.objects.get().distinct_id == "u" * 255
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("distinct_id", "u" * 256),
+        ("event_name", "e" * 256),
+        ("distinct_id", ""),
+        ("event_name", "bad\x00name"),
+    ],
+)
+def test_capture_rejects_values_the_database_cannot_store(client, field, value):
+    payload = {"distinct_id": "user-1", "event_name": "page_view", field: value}
+
+    response = client.post("/api/capture", data=payload, content_type="application/json")
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"][-1] == field
+    assert Event.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_capture_batch_rejects_whole_batch_when_one_event_is_invalid(client):
+    response = client.post(
+        "/api/capture/batch",
+        data={
+            "events": [
+                {"distinct_id": "user-1", "event_name": "page_view"},
+                {"distinct_id": "u" * 256, "event_name": "page_view"},
+            ]
+        },
+        content_type="application/json",
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"][-2:] == [1, "distinct_id"]
+    assert Event.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_capture_rejects_oversized_properties(client, settings):
+    settings.MAX_EVENT_PROPERTIES_BYTES = 64
+
+    accepted = client.post(
+        "/api/capture",
+        data={"distinct_id": "user-1", "event_name": "small", "properties": {"k": "v"}},
+        content_type="application/json",
+    )
+    rejected = client.post(
+        "/api/capture",
+        data={"distinct_id": "user-1", "event_name": "big", "properties": {"k": "x" * 100}},
+        content_type="application/json",
+    )
+
+    assert accepted.status_code == 200
+    assert rejected.status_code == 422
+    assert "exceeds maximum of 64 bytes" in rejected.json()["detail"][0]["msg"]
+    assert list(Event.objects.values_list("event_name", flat=True)) == ["small"]
+
+
+@pytest.mark.django_db
+def test_capture_rejects_nul_characters_in_properties(client):
+    response = client.post(
+        "/api/capture",
+        data={"distinct_id": "user-1", "event_name": "page_view", "properties": {"k": ["\x00"]}},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 422
+    assert Event.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_events_endpoint_caps_limit_and_supports_before_filter(client, settings):
     settings.MAX_EVENTS_LIMIT = 2
     now = timezone.now()

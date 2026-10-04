@@ -232,10 +232,14 @@
       "EventCaptureSchema": {
         "properties": {
           "distinct_id": {
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Distinct Id",
             "type": "string"
           },
           "event_name": {
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Event Name",
             "type": "string"
           },

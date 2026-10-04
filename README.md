@@ -105,6 +105,7 @@ Important environment variables:
 - `REDIS_URL`
 - `CACHE_URL`
 - `MAX_CAPTURE_BATCH_SIZE`
+- `MAX_EVENT_PROPERTIES_BYTES` (default 32768)
 - `MAX_EVENTS_LIMIT`
 - `MAX_INSIGHTS_LOOKBACK_MINUTES`
 - `EVENT_RETENTION_DAYS`
@@ -167,6 +168,8 @@ The SDK batches events in a background worker, attaches `event_uuid` and `sent_a
   "sent_at": "YYYY-MM-DDTHH:MM:SSZ"
 }
 ```
+
+`distinct_id` and `event_name` must be 1 to 255 characters. `properties` may be at most `MAX_EVENT_PROPERTIES_BYTES` once serialized as JSON. No string may contain a NUL character. Anything else is rejected with HTTP 422, and in a batch one invalid event rejects the whole request, so nothing is accepted and then lost later.
 
 Response:
 
