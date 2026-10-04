@@ -47,3 +47,7 @@ node_modules
 .celery.pid
 .backend.log
 .celery.log
+
+# Python packaging build output
+build/
+*.egg-info/

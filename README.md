@@ -212,3 +212,7 @@ Returns minute buckets shaped like:
 ## Status
 
 TelemetryTaco is intentionally not solving multi-tenancy, auth, cohorts, funnels, feature flags, or ClickHouse analytics yet. The current code is optimized for a maintainable ingestion-and-dashboard MVP with clean seams for future expansion.
+
+## License
+
+TelemetryTaco is released under the [MIT License](LICENSE).

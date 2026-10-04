@@ -1,6 +1,7 @@
 {
   "name": "telemetry-taco",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "description": "Lightweight telemetry tool designed to correlate Feature Usage with System Health in real-time",
   "scripts": {

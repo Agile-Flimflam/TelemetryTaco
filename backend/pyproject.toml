@@ -2,7 +2,8 @@
 name = "telemetry-taco-backend"
 version = "0.1.0"
 description = "Backend for TelemetryTaco"
-authors = ["TelemetryTaco Team"]
+authors = ["Barry <43803274+BarryHenryJr@users.noreply.github.com>"]
+license = "MIT"
 package-mode = false
 
 [tool.poetry.dependencies]
