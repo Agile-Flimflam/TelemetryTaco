@@ -51,3 +51,14 @@ class HealthStatusResponse(Schema):
     status: str
     database: str
     cache: str
+
+class TopEventSchema(Schema):
+    event_name: str
+    count: int
+
+class PersonSummaryResponse(Schema):
+    distinct_id: str
+    first_seen: datetime | None
+    last_seen: datetime | None
+    event_count: int
+    top_events: list[TopEventSchema]
