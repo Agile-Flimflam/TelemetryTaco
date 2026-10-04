@@ -8,7 +8,7 @@ React 18 + Vite + TypeScript dashboard. Read the root [`AGENTS.md`](../AGENTS.md
 frontend/src/
 ├── main.tsx                 # entry; wraps <App/> in AppProviders
 ├── app/                     # app shell: App.tsx, providers.tsx, query-client.ts
-├── features/<feature>/      # one folder per product area (events, insights)
+├── features/<feature>/      # one folder per product area (events, insights, overview)
 │   ├── queries.ts           # React Query hooks + fetchers for this feature
 │   └── components/          # feature components and their *.test.tsx files
 ├── shared/
@@ -56,6 +56,7 @@ CI regenerates both files and fails on any diff. If the backend changed, regener
 pnpm test                                  # all (vitest run)
 pnpm vitest run src/features/insights      # one folder
 pnpm test:watch
+pnpm test:coverage                         # as CI runs it
 ```
 
 - Put tests next to the component as `*.test.tsx`.

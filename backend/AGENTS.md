@@ -18,9 +18,9 @@ backend/
     ├── selectors/           # read queries: return model instances or plain data
     ├── tasks/               # Celery tasks; persistence happens here
     ├── models.py            # Event
-    ├── management/commands/ # seed_events, purge_expired_events, export_openapi_schema
+    ├── management/commands/ # check_db, seed_events, purge_expired_events, export_openapi_schema
     ├── celery.py            # Celery app (autodiscovers tasks)
-    └── tests/               # pytest; test_api.py (HTTP) and test_tasks.py (worker)
+    └── tests/               # pytest: test_api.py (HTTP), test_tasks.py (worker), test_commands.py
 ```
 
 ## Where code goes
@@ -53,7 +53,7 @@ Task arguments must stay JSON-serializable (`CELERY_TASK_SERIALIZER = "json"`), 
 ## Settings and environment
 
 - `DJANGO_SETTINGS_MODULE` defaults to `telemetry_taco.settings`, which loads **development**.
-- Tests use `telemetry_taco.settings.test` (configured in `pyproject.toml`): SQLite, LocMem cache, `CELERY_TASK_ALWAYS_EAGER=True`, effectively unlimited rate limits. Tests need no Postgres or Redis.
+- Tests use `telemetry_taco.settings.test` (configured in `pyproject.toml`): in-memory SQLite unless `TEST_DATABASE_URL` is set, LocMem cache, `CELERY_TASK_ALWAYS_EAGER=True`, effectively unlimited rate limits. By default tests need no Postgres or Redis.
 - Production refuses to start with the default or a short `SECRET_KEY`.
 - `base.py` reads `backend/.env` if present. Never commit `.env`.
 
@@ -63,13 +63,18 @@ Task arguments must stay JSON-serializable (`CELERY_TASK_SERIALIZER = "json"`), 
 poetry run pytest                          # all
 poetry run pytest core/tests/test_api.py   # one file
 poetry run pytest -k idempotent            # by name
+poetry run pytest --cov                    # with coverage, as CI runs it
+
+# on Postgres, like CI
+docker compose up -d db
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco poetry run pytest
 ```
 
 - Use the `client` fixture for HTTP-level tests, and `@pytest.mark.django_db` for anything touching the DB.
 - Use the pytest-django `settings` fixture to override limits per test (see `test_capture_batch_rejects_oversized_batch`).
 - Call task bodies directly with `.run(...)` in task tests.
 - Because Celery runs eagerly in tests, a capture request persists synchronously, so assert on `Event.objects` right after the POST.
-- Tests run on SQLite, so Postgres-specific behavior (JSONB operators, `DataError` on overlong strings, timezone truncation) is **not** covered. Say so in the PR if your change depends on it.
+- CI runs the suite on Postgres 16, but local runs default to SQLite, which doesn't enforce `varchar` lengths and handles JSON and timezone truncation differently. If your change touches any of those, run the Postgres command above before pushing.
 
 ## Migrations
 
@@ -84,6 +89,7 @@ poetry run ruff check . && poetry run ruff format --check .
 DJANGO_SETTINGS_MODULE=telemetry_taco.settings.test poetry run python manage.py check
 poetry run pytest
 poetry run bandit -r . -c bandit.yaml       # CI runs this too
+poetry run python manage.py check_db        # optional: is the dev database reachable?
 ```
 
 If you changed an endpoint or schema, regenerate frontend types from the repo root with `pnpm generate:api-types`.

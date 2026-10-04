@@ -31,10 +31,10 @@ Three packages, three toolchains:
 
 ## Commands
 
-Run these from the repo root. Each one is what CI runs, so a clean local run means CI should pass.
+Run these from the repo root. They cover the same checks as CI, so a clean local run means CI should pass, apart from the Postgres and Python-version differences noted below.
 
 ```bash
-# one-time setup
+# one-time setup (Poetry 2.x is required; CI pins 2.2.1)
 cd backend && poetry install && cd ..
 pnpm install
 
@@ -60,7 +60,21 @@ cd frontend && pnpm vitest run src/features/events                 # one fronten
 cd frontend && pnpm lint && pnpm type-check
 ```
 
-Backend and frontend tests need **no** running services. The test settings use SQLite, an in-memory cache and eager Celery. Only the full app (`./start.sh` or `make dev`) needs Docker for Postgres and Redis.
+Backend and frontend tests need **no** running services. The test settings default to in-memory SQLite, an in-memory cache and eager Celery. Only the full app (`./start.sh` or `make dev`) needs Docker for Postgres and Redis.
+
+### What CI runs
+
+`.github/workflows/ci.yml` has these jobs (`codeql.yml` runs CodeQL separately):
+
+| Job | What it checks |
+|---|---|
+| Backend lint | Ruff lint and format, Bandit, Django system check, and that `frontend/openapi.json` matches the exported schema |
+| Backend tests | pytest with coverage on **Postgres 16** (via `TEST_DATABASE_URL`), on Python 3.11, 3.12 and 3.13 |
+| Frontend | `generated.ts` matches `openapi.json`, then ESLint, `tsc`, Vitest with coverage, and the build |
+| SDK | installs `./sdk` into a clean venv and runs its tests on Python 3.11, 3.12 and 3.13 |
+| Docker image | builds `backend/Dockerfile` |
+
+Locally, tests run on SQLite by default. To match CI when your change touches queries, JSON fields, string lengths or timezones, run them on Postgres (see `backend/AGENTS.md`).
 
 ## Rules that span packages
 
@@ -91,7 +105,6 @@ These are known rough edges. Don't paper over them silently in an unrelated chan
 - **Rate limits are per IP, using `REMOTE_ADDR`.** They're configured with `RATE_LIMIT_*` settings, and the test settings set them effectively unlimited.
 - **`sent_at` from the client is stored as the event's `timestamp`.** It doesn't mean "time sent".
 - **Several overlapping ways to run things** exist: `start.sh`, `stop.sh`, `restart-backend.sh`, `seed.sh`, the `Makefile` and root `package.json` scripts. Prefer the `pnpm` scripts above, and don't add new shell scripts.
-- `backend/test.sqlite3` is a committed artifact of the test settings. Don't commit changes to it.
 
 ## Style
 
