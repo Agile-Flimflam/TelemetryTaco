@@ -1,8 +1,0 @@
-pyproject.toml
-telemetry_taco/__init__.py
-telemetry_taco/client.py
-telemetry_taco_sdk.egg-info/PKG-INFO
-telemetry_taco_sdk.egg-info/SOURCES.txt
-telemetry_taco_sdk.egg-info/dependency_links.txt
-telemetry_taco_sdk.egg-info/top_level.txt
-tests/test_client.py
