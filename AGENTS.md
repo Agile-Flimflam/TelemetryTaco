@@ -31,7 +31,7 @@ Three packages, three toolchains:
 
 ## Commands
 
-Run these from the repo root. They cover the same checks as CI, so a clean local run means CI should pass, apart from the Postgres and Python-version differences noted below.
+Run these from the repo root. They cover most of what CI checks, but not all of it. `pnpm validate:all` does **not** run Bandit (`pnpm security:backend`), build the Docker image (`docker build backend`), test on Postgres or on every supported Python version, or test the SDK from a clean install. See "What CI runs" below, and run the extra checks when your change touches those areas.
 
 ```bash
 # one-time setup (Poetry 2.x is required; CI pins 2.2.1)
