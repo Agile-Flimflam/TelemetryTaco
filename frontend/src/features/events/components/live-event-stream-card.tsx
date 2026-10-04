@@ -7,6 +7,7 @@ import type { EventRecord } from '@/shared/api/types'
 
 interface LiveEventStreamCardProps {
   limit: number
+  onSelectPerson?: (distinctId: string) => void
 }
 
 const timestampFormatter = new Intl.DateTimeFormat('en-US', {
@@ -25,39 +26,56 @@ function EventRow({
   event,
   expanded,
   onToggle,
+  onSelectPerson,
 }: {
   event: EventRecord
   expanded: boolean
   onToggle: (id: number) => void
+  onSelectPerson?: (distinctId: string) => void
 }) {
   return (
-    <button
-      className="w-full cursor-pointer border-b border-border/60 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/30"
-      onClick={() => onToggle(event.id)}
-      type="button"
-    >
-      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">{event.event_name}</span>
-        <span>{event.distinct_id}</span>
-        <span>{formatTimestamp(event.timestamp)}</span>
-        <Badge variant="outline">{Object.keys(event.properties).length} props</Badge>
+    <div className="border-b border-border/60 last:border-b-0 hover:bg-muted/30 transition-colors">
+      <div className="flex w-full items-center px-4 py-3 text-left">
+        <button
+          className="flex-1 cursor-pointer"
+          onClick={() => onToggle(event.id)}
+          type="button"
+        >
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{event.event_name}</span>
+            <span>{formatTimestamp(event.timestamp)}</span>
+            <Badge variant="outline">{Object.keys(event.properties).length} props</Badge>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelectPerson?.(event.distinct_id)
+          }}
+          className="ml-3 text-sm text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+        >
+          {event.distinct_id}
+        </button>
       </div>
       {expanded ? (
-        <div className="mt-3 grid gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
-          <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Properties</div>
-          <pre className="overflow-x-auto rounded-xl bg-muted/30 p-3 text-xs leading-6 text-foreground">
-            {JSON.stringify(event.properties, null, 2)}
-          </pre>
-          <div className="text-xs text-muted-foreground">
-            UUID <span className="font-medium text-foreground">{event.uuid}</span>
+        <div className="px-4 pb-3">
+          <div className="mt-1 grid gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
+            <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Properties</div>
+            <pre className="overflow-x-auto rounded-xl bg-muted/30 p-3 text-xs leading-6 text-foreground">
+              {JSON.stringify(event.properties, null, 2)}
+            </pre>
+            <div className="text-xs text-muted-foreground">
+              UUID <span className="font-medium text-foreground">{event.uuid}</span>
+            </div>
           </div>
         </div>
       ) : null}
-    </button>
+    </div>
   )
 }
 
-export function LiveEventStreamCard({ limit }: LiveEventStreamCardProps) {
+export function LiveEventStreamCard({ limit, onSelectPerson }: LiveEventStreamCardProps) {
   const { data = [], error, isLoading } = useEventsQuery(limit)
   const deferredEvents = useDeferredValue(data)
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
@@ -110,6 +128,7 @@ export function LiveEventStreamCard({ limit }: LiveEventStreamCardProps) {
                 event={event}
                 expanded={expandedIds.has(event.id)}
                 onToggle={toggleExpand}
+                onSelectPerson={onSelectPerson}
               />
             ))}
           </div>

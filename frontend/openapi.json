@@ -195,6 +195,94 @@
           }
         }
       }
+    },
+    "/api/persons/{distinct_id}": {
+      "get": {
+        "operationId": "core_api_persons_get_person",
+        "summary": "Get Person",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "distinct_id",
+            "schema": {
+              "title": "Distinct Id",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{distinct_id}/events": {
+      "get": {
+        "operationId": "core_api_persons_list_events_for_person",
+        "summary": "List Events For Person",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "distinct_id",
+            "schema": {
+              "title": "Distinct Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventResponseSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -376,6 +464,76 @@
           "cache"
         ],
         "title": "HealthStatusResponse",
+        "type": "object"
+      },
+      "PersonSummaryResponse": {
+        "properties": {
+          "distinct_id": {
+            "title": "Distinct Id",
+            "type": "string"
+          },
+          "first_seen": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          },
+          "event_count": {
+            "title": "Event Count",
+            "type": "integer"
+          },
+          "top_events": {
+            "items": {
+              "$ref": "#/components/schemas/TopEventSchema"
+            },
+            "title": "Top Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "distinct_id",
+          "first_seen",
+          "last_seen",
+          "event_count",
+          "top_events"
+        ],
+        "title": "PersonSummaryResponse",
+        "type": "object"
+      },
+      "TopEventSchema": {
+        "properties": {
+          "event_name": {
+            "title": "Event Name",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_name",
+          "count"
+        ],
+        "title": "TopEventSchema",
         "type": "object"
       }
     }

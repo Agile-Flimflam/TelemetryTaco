@@ -106,6 +106,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/persons/{distinct_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Person */
+        get: operations["core_api_persons_get_person"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/persons/{distinct_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Events For Person */
+        get: operations["core_api_persons_list_events_for_person"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -188,6 +222,26 @@ export interface components {
             database: string;
             /** Cache */
             cache: string;
+        };
+        /** PersonSummaryResponse */
+        PersonSummaryResponse: {
+            /** Distinct Id */
+            distinct_id: string;
+            /** First Seen */
+            first_seen: string | null;
+            /** Last Seen */
+            last_seen: string | null;
+            /** Event Count */
+            event_count: number;
+            /** Top Events */
+            top_events: components["schemas"]["TopEventSchema"][];
+        };
+        /** TopEventSchema */
+        TopEventSchema: {
+            /** Event Name */
+            event_name: string;
+            /** Count */
+            count: number;
         };
     };
     responses: never;
@@ -336,6 +390,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthStatusResponse"];
+                };
+            };
+        };
+    };
+    core_api_persons_get_person: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                distinct_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonSummaryResponse"];
+                };
+            };
+        };
+    };
+    core_api_persons_list_events_for_person: {
+        parameters: {
+            query?: {
+                limit?: number;
+                before?: string | null;
+            };
+            header?: never;
+            path: {
+                distinct_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventResponseSchema"][];
                 };
             };
         };

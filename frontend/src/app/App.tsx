@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Suspense, lazy } from 'react'
 import { LiveEventStreamCard } from '@/features/events/components/live-event-stream-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PersonView } from '@/features/persons/components/person-view'
 
 const InsightChartCard = lazy(async () => {
   const module = await import('@/features/insights/components/insight-chart-card')
@@ -25,6 +27,8 @@ function InsightCardFallback() {
 }
 
 function App() {
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(255,140,57,0.25),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(255,214,99,0.18),_transparent_24%),linear-gradient(180deg,_rgba(12,14,18,0.94),_rgba(12,14,18,1))]" />
@@ -69,11 +73,17 @@ function App() {
           </Card>
         </header>
 
-        <main className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <Suspense fallback={<InsightCardFallback />}>
-            <InsightChartCard lookbackMinutes={60} />
-          </Suspense>
-          <LiveEventStreamCard limit={100} />
+        <main className="grid gap-6">
+          {selectedPerson ? (
+            <PersonView distinctId={selectedPerson} onClose={() => setSelectedPerson(null)} />
+          ) : (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+              <Suspense fallback={<InsightCardFallback />}>
+                <InsightChartCard lookbackMinutes={60} />
+              </Suspense>
+              <LiveEventStreamCard limit={100} onSelectPerson={setSelectedPerson} />
+            </div>
+          )}
         </main>
       </div>
     </div>
