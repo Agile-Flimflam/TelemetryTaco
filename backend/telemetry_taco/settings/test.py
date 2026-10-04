@@ -3,11 +3,9 @@ from .base import *  # noqa: F403
 DEBUG = False
 SECRET_KEY = "test-secret-key-not-for-production-use-only-12345678901234567890"
 
+# In-memory SQLite by default; CI sets TEST_DATABASE_URL to run the suite against Postgres.
 DATABASES = {  # noqa: F405
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
+    "default": env.db("TEST_DATABASE_URL", default="sqlite://:memory:"),  # noqa: F405
 }
 
 CACHES = {  # noqa: F405
