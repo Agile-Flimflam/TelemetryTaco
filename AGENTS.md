@@ -88,7 +88,7 @@ These are known rough edges. Don't paper over them silently in an unrelated chan
 
 - **Two packages are named `telemetry_taco`.** One is the Django project (`backend/telemetry_taco/`) and the other is the SDK (`sdk/telemetry_taco/`). Never install the SDK into the backend environment. The SDK tests only work because they run from inside `sdk/`.
 - **There is no authentication.** Every endpoint is public. Don't build features that assume a user or project exists without adding that layer first.
-- **Rate limits are per IP, using `REMOTE_ADDR`.** They're configured with `RATE_LIMIT_*` settings, and the test settings set them effectively unlimited.
+- **Rate limits are per client IP.** That's `REMOTE_ADDR` unless `TRUSTED_PROXY_COUNT` is set, in which case it's read from `X-Forwarded-For` (`core/api/ratelimit.py`). They're configured with `RATE_LIMIT_*` settings, and the test settings set them effectively unlimited.
 - **`sent_at` from the client is stored as the event's `timestamp`.** It doesn't mean "time sent".
 - **Several overlapping ways to run things** exist: `start.sh`, `stop.sh`, `restart-backend.sh`, `seed.sh`, the `Makefile` and root `package.json` scripts. Prefer the `pnpm` scripts above, and don't add new shell scripts.
 - `backend/test.sqlite3` is a committed artifact of the test settings. Don't commit changes to it.

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch, ApiError } from '@/shared/api/client'
+import { POLL_INTERVAL_MS } from '@/shared/api/polling'
 import type { InsightPoint } from '@/shared/api/types'
 
 export const insightsQueryKey = ['insights'] as const
@@ -24,7 +25,7 @@ export function useInsightsQuery(lookbackMinutes: number) {
   return useQuery({
     queryKey: [...insightsQueryKey, lookbackMinutes],
     queryFn: () => fetchInsights(lookbackMinutes),
-    refetchInterval: 10000,
-    staleTime: 5000,
+    refetchInterval: POLL_INTERVAL_MS.insights,
+    staleTime: POLL_INTERVAL_MS.insights / 2,
   })
 }

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch, ApiError, buildApiUrl } from '@/shared/api/client'
+import { POLL_INTERVAL_MS } from '@/shared/api/polling'
 import type { EventStats, HealthStatus } from '@/shared/api/types'
 
 export const statsQueryKey = ['stats'] as const
@@ -36,8 +37,8 @@ export function useStatsQuery() {
   return useQuery({
     queryKey: statsQueryKey,
     queryFn: fetchStats,
-    refetchInterval: 30000,
-    staleTime: 15000,
+    refetchInterval: POLL_INTERVAL_MS.stats,
+    staleTime: POLL_INTERVAL_MS.stats / 2,
   })
 }
 
@@ -45,7 +46,7 @@ export function useHealthQuery() {
   return useQuery({
     queryKey: healthQueryKey,
     queryFn: fetchHealth,
-    refetchInterval: 30000,
-    staleTime: 15000,
+    refetchInterval: POLL_INTERVAL_MS.health,
+    staleTime: POLL_INTERVAL_MS.health / 2,
   })
 }
