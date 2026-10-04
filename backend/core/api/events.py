@@ -12,11 +12,12 @@ from core.api.schemas import (
     EventBatchCaptureSchema,
     EventCaptureSchema,
     EventResponseSchema,
+    EventStatsResponse,
     HealthStatusResponse,
     InsightDataPoint,
     StatusResponse,
 )
-from core.selectors.events import get_insights, list_recent_events
+from core.selectors.events import get_event_stats, get_insights, list_recent_events
 from core.services.health import get_liveness_status, get_readiness_status
 from core.services.ingestion import enqueue_events
 
@@ -81,6 +82,12 @@ def get_event_insights(request, lookback_minutes: int = 60):
         raise HttpError(400, "lookback_minutes must be greater than zero")
 
     return get_insights(lookback_minutes=lookback_minutes)
+
+
+@router.get("/stats", response=EventStatsResponse)
+@ratelimit(key="ip", rate=settings.RATE_LIMIT_GET_INSIGHTS, method="GET", block=True)
+def get_stats(request):
+    return get_event_stats()
 
 
 @router.get("/health/live", response=HealthStatusResponse)

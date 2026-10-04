@@ -17,4 +17,5 @@ export interface EventRecord extends Omit<EventSchema, 'id' | 'timestamp' | 'pro
 }
 
 export type InsightPoint = components['schemas']['InsightDataPoint']
+export type EventStats = components['schemas']['EventStatsResponse']
 export type HealthStatus = components['schemas']['HealthStatusResponse']

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from django.conf import settings
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.db.models.functions import TruncMinute
 from django.utils import timezone
 
@@ -45,6 +45,22 @@ def get_insights(*, lookback_minutes: int) -> list[dict[str, int | str]]:
         }
         for item in aggregated
     ]
+
+
+def get_event_stats(*, now: datetime | None = None) -> dict[str, int | datetime | None]:
+    cutoff_time = (now or timezone.now()) - timedelta(hours=24)
+
+    recent = Event.objects.filter(timestamp__gte=cutoff_time).aggregate(
+        events=Count("id"),
+        distinct_ids=Count("distinct_id", distinct=True),
+    )
+    last_received = Event.objects.aggregate(last=Max("created_at"))["last"]
+
+    return {
+        "events_last_24h": recent["events"],
+        "unique_distinct_ids_last_24h": recent["distinct_ids"],
+        "last_event_received_at": last_received,
+    }
 
 
 def purge_expired_events(*, now: datetime | None = None) -> int:
