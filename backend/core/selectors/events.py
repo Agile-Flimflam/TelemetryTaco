@@ -47,6 +47,24 @@ def get_insights(*, lookback_minutes: int) -> list[dict[str, int | str]]:
     ]
 
 
+def get_event_stats(*, now: datetime | None = None) -> dict[str, int | datetime | None]:
+    cutoff_time = (now or timezone.now()) - timedelta(hours=24)
+
+    recent = Event.objects.filter(timestamp__gte=cutoff_time).aggregate(
+        events=Count("id"),
+        distinct_ids=Count("distinct_id", distinct=True),
+    )
+    # Rows are inserted in id order, so the newest id is the last event received. This uses
+    # the primary-key index instead of scanning the unindexed created_at column.
+    last_received = Event.objects.order_by("-id").values_list("created_at", flat=True).first()
+
+    return {
+        "events_last_24h": recent["events"],
+        "unique_distinct_ids_last_24h": recent["distinct_ids"],
+        "last_event_received_at": last_received,
+    }
+
+
 def purge_expired_events(*, now: datetime | None = None) -> int:
     if settings.EVENT_RETENTION_DAYS <= 0:
         return 0

@@ -47,6 +47,12 @@ class InsightDataPoint(Schema):
     count: int
 
 
+class EventStatsResponse(Schema):
+    events_last_24h: int
+    unique_distinct_ids_last_24h: int
+    last_event_received_at: datetime | None
+
+
 class HealthStatusResponse(Schema):
     status: str
     database: str

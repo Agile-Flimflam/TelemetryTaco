@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Stats */
+        get: operations["core_api_events_get_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health/live": {
         parameters: {
             query?: never;
@@ -180,6 +197,15 @@ export interface components {
             /** Count */
             count: number;
         };
+        /** EventStatsResponse */
+        EventStatsResponse: {
+            /** Events Last 24H */
+            events_last_24h: number;
+            /** Unique Distinct Ids Last 24H */
+            unique_distinct_ids_last_24h: number;
+            /** Last Event Received At */
+            last_event_received_at: string | null;
+        };
         /** HealthStatusResponse */
         HealthStatusResponse: {
             /** Status */
@@ -287,6 +313,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InsightDataPoint"][];
+                };
+            };
+        };
+    };
+    core_api_events_get_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventStatsResponse"];
                 };
             };
         };

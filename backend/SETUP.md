@@ -79,6 +79,12 @@ POETRY_CACHE_DIR=/tmp/pypoetry-cache poetry run pytest
 
 ## Commands
 
+Check that the database is reachable:
+
+```bash
+poetry run python manage.py check_db
+```
+
 Seed sample data:
 
 ```bash

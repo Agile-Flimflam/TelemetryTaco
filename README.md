@@ -6,6 +6,8 @@ TelemetryTaco is a lightweight self-hosted telemetry MVP built around three conc
 - inspect recent events in a live dashboard
 - query minute-level insight aggregates over a recent lookback window
 
+![TelemetryTaco dashboard](docs/screenshots/dashboard.png)
+
 The codebase now targets a strong single-project MVP rather than a broad PostHog clone. The refactor in this repo keeps the current API contract intact while adding real batching, idempotency, generated frontend types, tests, and a cleaner developer workflow.
 
 ## Current Architecture
@@ -38,6 +40,7 @@ Python SDK / API clients
 - `POST /api/capture/batch`: batch capture endpoint used by the SDK
 - `GET /api/events`: bounded recent-event feed with optional `before` cursor
 - `GET /api/insights`: bounded minute-level aggregate series
+- `GET /api/stats`: event count, unique `distinct_id`s and last received event for the dashboard header
 - `GET /api/health/live` and `GET /api/health/ready`
 - event idempotency via caller-supplied `event_uuid`
 - OpenAPI export and generated frontend types
@@ -200,6 +203,18 @@ Returns minute buckets shaped like:
 [
   { "time": "18:04", "count": 4 }
 ]
+```
+
+### `GET /api/stats`
+
+Returns a summary of the last 24 hours plus when the most recent event arrived:
+
+```json
+{
+  "events_last_24h": 2999,
+  "unique_distinct_ids_last_24h": 75,
+  "last_event_received_at": "2026-10-04T07:42:00.310Z"
+}
 ```
 
 ## Developer Workflow

@@ -209,6 +209,44 @@ def test_insights_endpoint_respects_max_lookback(client, settings):
 
 
 @pytest.mark.django_db
+def test_stats_endpoint_summarizes_last_24_hours(client):
+    now = timezone.now()
+    Event.objects.create(distinct_id="user-1", event_name="page_view", timestamp=now)
+    Event.objects.create(
+        distinct_id="user-1", event_name="page_view", timestamp=now - timedelta(hours=1)
+    )
+    Event.objects.create(
+        distinct_id="user-2", event_name="signup", timestamp=now - timedelta(hours=2)
+    )
+    Event.objects.create(
+        distinct_id="user-3", event_name="page_view", timestamp=now - timedelta(hours=30)
+    )
+    latest = Event.objects.order_by("-created_at").first()
+
+    response = client.get("/api/stats")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["events_last_24h"] == 3
+    assert body["unique_distinct_ids_last_24h"] == 2
+    assert body["last_event_received_at"] is not None
+    assert latest is not None
+    assert body["last_event_received_at"].startswith(latest.created_at.strftime("%Y-%m-%dT%H:%M"))
+
+
+@pytest.mark.django_db
+def test_stats_endpoint_handles_empty_database(client):
+    response = client.get("/api/stats")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "events_last_24h": 0,
+        "unique_distinct_ids_last_24h": 0,
+        "last_event_received_at": None,
+    }
+
+
+@pytest.mark.django_db
 def test_purge_expired_events_command_deletes_expired_rows(settings):
     settings.EVENT_RETENTION_DAYS = 30
     Event.objects.create(

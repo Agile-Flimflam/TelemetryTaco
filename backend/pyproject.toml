@@ -17,13 +17,14 @@ django-cors-headers = "^4.3.0"
 django-environ = "^0.11.0"
 django-ratelimit = "^4.1.0"
 django-redis = "^5.4.0"
-faker = "^24.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.0"
 bandit = {extras = ["toml"], version = "^1.7.0"}
 pytest = "^8.3.5"
 pytest-django = "^4.11.1"
+faker = "^24.0.0"
+pytest-cov = "^6.0.0"
 
 [tool.ruff]
 line-length = 100
@@ -49,6 +50,10 @@ known-first-party = ["telemetry_taco", "core"]
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "telemetry_taco.settings.test"
 python_files = ["test_*.py", "*_tests.py"]
+
+[tool.coverage.run]
+source = ["core", "telemetry_taco"]
+omit = ["*/migrations/*", "*/tests/*", "telemetry_taco/asgi.py", "telemetry_taco/wsgi.py"]
 
 [build-system]
 requires = ["poetry-core"]

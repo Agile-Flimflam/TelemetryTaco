@@ -148,6 +148,25 @@
         }
       }
     },
+    "/api/stats": {
+      "get": {
+        "operationId": "core_api_events_get_stats",
+        "summary": "Get Stats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health/live": {
       "get": {
         "operationId": "core_api_events_liveness",
@@ -353,6 +372,37 @@
           "count"
         ],
         "title": "InsightDataPoint",
+        "type": "object"
+      },
+      "EventStatsResponse": {
+        "properties": {
+          "events_last_24h": {
+            "title": "Events Last 24H",
+            "type": "integer"
+          },
+          "unique_distinct_ids_last_24h": {
+            "title": "Unique Distinct Ids Last 24H",
+            "type": "integer"
+          },
+          "last_event_received_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Event Received At"
+          }
+        },
+        "required": [
+          "events_last_24h",
+          "unique_distinct_ids_last_24h",
+          "last_event_received_at"
+        ],
+        "title": "EventStatsResponse",
         "type": "object"
       },
       "HealthStatusResponse": {
