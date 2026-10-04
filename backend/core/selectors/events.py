@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from django.conf import settings
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Q
 from django.db.models.functions import TruncMinute
 from django.utils import timezone
 
@@ -54,7 +54,9 @@ def get_event_stats(*, now: datetime | None = None) -> dict[str, int | datetime 
         events=Count("id"),
         distinct_ids=Count("distinct_id", distinct=True),
     )
-    last_received = Event.objects.aggregate(last=Max("created_at"))["last"]
+    # Rows are inserted in id order, so the newest id is the last event received. This uses
+    # the primary-key index instead of scanning the unindexed created_at column.
+    last_received = Event.objects.order_by("-id").values_list("created_at", flat=True).first()
 
     return {
         "events_last_24h": recent["events"],
