@@ -5,7 +5,7 @@ import pytest
 from django.utils import timezone
 
 from core.models import Event
-from core.tasks import process_event_batch_task, process_event_task
+from core.tasks import process_event_batch_task
 
 
 @pytest.mark.django_db
@@ -33,17 +33,19 @@ def test_process_event_batch_task_ignores_duplicate_event_uuids():
 
 
 @pytest.mark.django_db
-def test_process_event_task_persists_single_event():
+def test_process_event_batch_task_persists_single_event():
     event_uuid = str(uuid4())
 
-    processed_count = process_event_task.run(
-        {
-            "distinct_id": "user-456",
-            "event_name": "checkout_success",
-            "event_uuid": event_uuid,
-            "properties": {"total": 42},
-            "timestamp": timezone.now().isoformat(),
-        }
+    processed_count = process_event_batch_task.run(
+        [
+            {
+                "distinct_id": "user-456",
+                "event_name": "checkout_success",
+                "event_uuid": event_uuid,
+                "properties": {"total": 42},
+                "timestamp": timezone.now().isoformat(),
+            }
+        ]
     )
 
     assert processed_count == 1
@@ -55,17 +57,19 @@ def test_process_event_task_persists_single_event():
 
 
 @pytest.mark.django_db
-def test_process_event_task_converts_date_timestamp_to_start_of_day():
+def test_process_event_batch_task_converts_date_timestamp_to_start_of_day():
     event_uuid = str(uuid4())
     event_date = date(2026, 1, 1)
 
-    process_event_task.run(
-        {
-            "distinct_id": "user-789",
-            "event_name": "daily_summary",
-            "event_uuid": event_uuid,
-            "timestamp": event_date,
-        }
+    process_event_batch_task.run(
+        [
+            {
+                "distinct_id": "user-789",
+                "event_name": "daily_summary",
+                "event_uuid": event_uuid,
+                "timestamp": event_date,
+            }
+        ]
     )
 
     stored_event = Event.objects.get()
@@ -77,7 +81,7 @@ def test_process_event_task_converts_date_timestamp_to_start_of_day():
 
 
 @pytest.mark.django_db
-def test_process_event_task_rejects_non_datetime_isoformat_objects():
+def test_process_event_batch_task_rejects_non_datetime_isoformat_objects():
     class FakeTimestamp:
         def isoformat(self) -> str:
             return "2026-01-01"
@@ -89,11 +93,13 @@ def test_process_event_task_rejects_non_datetime_isoformat_objects():
         ValueError,
         match="timestamp must be a datetime, date, or ISO 8601 datetime string",
     ):
-        process_event_task.run(
-            {
-                "distinct_id": "user-999",
-                "event_name": "invalid_timestamp",
-                "event_uuid": str(uuid4()),
-                "timestamp": FakeTimestamp(),
-            }
+        process_event_batch_task.run(
+            [
+                {
+                    "distinct_id": "user-999",
+                    "event_name": "invalid_timestamp",
+                    "event_uuid": str(uuid4()),
+                    "timestamp": FakeTimestamp(),
+                }
+            ]
         )

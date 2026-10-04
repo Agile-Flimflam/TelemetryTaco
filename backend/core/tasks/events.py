@@ -104,26 +104,6 @@ def process_event_batch_task(self, events_data: list[dict[str, Any]]) -> int:
     retry_jitter=True,
     retry_kwargs={"max_retries": 5},
 )
-def process_event_task(self, event_data: dict[str, Any]) -> int:
-    processed_count = _persist_events([event_data])
-    logger.info(
-        "processed_event",
-        extra={
-            "task_name": self.name,
-            "task_id": self.request.id,
-            "event_count": processed_count,
-        },
-    )
-    return processed_count
-
-
-@shared_task(
-    bind=True,
-    autoretry_for=(OperationalError,),
-    retry_backoff=True,
-    retry_jitter=True,
-    retry_kwargs={"max_retries": 5},
-)
 def purge_expired_events_task(self) -> int:
     deleted_count = purge_expired_events()
     logger.info(

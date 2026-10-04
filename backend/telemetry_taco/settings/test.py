@@ -6,7 +6,7 @@ SECRET_KEY = "test-secret-key-not-for-production-use-only-12345678901234567890"
 DATABASES = {  # noqa: F405
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "test.sqlite3",  # noqa: F405
+        "NAME": ":memory:",
     }
 }
 

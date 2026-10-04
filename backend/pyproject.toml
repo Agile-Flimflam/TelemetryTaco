@@ -16,13 +16,13 @@ django-cors-headers = "^4.3.0"
 django-environ = "^0.11.0"
 django-ratelimit = "^4.1.0"
 django-redis = "^5.4.0"
-faker = "^24.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.0"
 bandit = {extras = ["toml"], version = "^1.7.0"}
 pytest = "^8.3.5"
 pytest-django = "^4.11.1"
+faker = "^24.0.0"
 
 [tool.ruff]
 line-length = 100
