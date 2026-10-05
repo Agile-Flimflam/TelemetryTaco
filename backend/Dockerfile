@@ -1,39 +1,59 @@
-FROM python:3.11-slim
+# The default (last) stage is the production image: gunicorn, as a non-root user, with only
+# the main dependencies. docker-compose.yml builds the `dev` stage instead.
+
+FROM python:3.13-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:$PATH
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    curl \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry (exact version pin for reproducible builds)
-# Using pip install with exact version pin (poetry==2.2.1, matching the CI pin) ensures consistent builds
-# across environments and time. pip verifies package integrity from PyPI, but the
-# exact version pin is what guarantees reproducibility.
-ENV POETRY_NO_INTERACTION=1
-ENV POETRY_VIRTUALENVS_CREATE=false
-ENV POETRY_CACHE_DIR=/opt/poetry-cache
+FROM base AS builder
+
+# Exact pin for reproducible builds. Keep in sync with POETRY_VERSION in ci.yml and the
+# version that wrote poetry.lock.
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_CACHE_DIR=/tmp/poetry-cache
 RUN pip install --no-cache-dir "poetry==2.2.1" \
-    && poetry --version
+    && python -m venv /opt/venv
 
-# Configure Poetry: Don't create virtual environment, install dependencies to system
-RUN poetry config virtualenvs.create false
+COPY pyproject.toml poetry.lock ./
+# Poetry installs into the active venv (VIRTUAL_ENV), which the later stages copy whole.
+# psycopg ships binary wheels, so no compiler is needed.
+RUN poetry install --only main --no-root && rm -rf "$POETRY_CACHE_DIR"
 
-# Copy Poetry files
-# poetry.lock is required for reproducible builds
-COPY pyproject.toml poetry.lock /app/
 
-# Install dependencies
-RUN poetry install --no-interaction --no-ansi
+# Local development: dev dependencies too, for runserver, the test suite and seed_events.
+FROM builder AS dev
 
-# Copy application code
-COPY . /app/
-
-# Expose port
+RUN poetry install --no-root && rm -rf "$POETRY_CACHE_DIR"
+COPY . .
 EXPOSE 8000
-
-# Default command (can be overridden in docker-compose.yml)
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+
+FROM base AS runtime
+
+RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY . .
+
+ENV DJANGO_SETTINGS_MODULE=config.settings.production
+# collectstatic only copies files, but production settings refuse to load without a real
+# SECRET_KEY, so give this one command a throwaway key.
+RUN SECRET_KEY="collectstatic-only-$(python -c 'import secrets; print(secrets.token_hex(32))')" \
+    python manage.py collectstatic --noinput
+
+USER app
+EXPOSE 8000
+# Probes /api/health/live in the API process; worker and beat containers report healthy.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD ["python", "healthcheck.py"]
+# Run the worker and beat from this image with `celery -A config worker` and
+# `celery -A config beat --schedule /tmp/celerybeat-schedule` (/app isn't writable).
+CMD ["gunicorn", "config.wsgi"]

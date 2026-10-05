@@ -4,7 +4,7 @@ BACKEND := cd backend && poetry run
 FRONTEND := pnpm --dir frontend
 COMPOSE := docker compose
 
-.PHONY: help setup services down migrate dev docker seed types \
+.PHONY: help setup services down migrate dev docker images seed types \
 	lint lint-backend lint-frontend fmt check \
 	test test-backend test-frontend test-sdk build \
 	validate validate-backend validate-frontend
@@ -36,6 +36,10 @@ dev: services migrate ## Run the API, worker, beat and frontend locally; Ctrl-C 
 
 docker: ## Run the whole stack in Docker, seeded with demo data
 	$(COMPOSE) up --build
+
+images: ## Build the production backend and frontend images
+	docker build -t telemetry-taco-backend backend
+	docker build -t telemetry-taco-frontend -f frontend/Dockerfile .
 
 seed: ## Add demo events; pass options with ARGS="--clean --count 5000"
 	$(BACKEND) python manage.py seed_events $(ARGS)

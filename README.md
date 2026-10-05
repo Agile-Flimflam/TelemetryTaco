@@ -89,6 +89,22 @@ make validate    # what CI runs that needs no Docker: types, lint, Django check,
 make seed ARGS="--clean --count 5000"   # wipe and reseed demo events
 ```
 
+## Production Images
+
+Tagged releases publish two images to GHCR. `make images` builds the same images locally.
+
+- `ghcr.io/agile-flimflam/telemetrytaco-backend` runs gunicorn as a non-root user, with only the main dependencies installed. Run the worker and beat from the same image by overriding the command.
+- `ghcr.io/agile-flimflam/telemetrytaco-frontend` is nginx serving the built dashboard on port 8080. It proxies `/api`, `/admin` and `/static` to `API_UPSTREAM` (default `http://backend:8000`).
+
+| Process | Command |
+|---|---|
+| Migrations, once per deploy | `python manage.py migrate --noinput` |
+| API (the default) | `gunicorn config.wsgi` |
+| Worker | `celery -A config worker` |
+| Beat, exactly one | `celery -A config beat --schedule /tmp/celerybeat-schedule` |
+
+The backend image uses `config.settings.production`, which needs `SECRET_KEY` (50+ characters), `DATABASE_URL`, `REDIS_URL`, `CACHE_URL` and `ALLOWED_HOSTS` (your public hostname). Behind the frontend image, set `TRUSTED_PROXY_COUNT=1`. Gunicorn reads `PORT` (default 8000), `WEB_CONCURRENCY` (default two workers per CPU) and `GUNICORN_TIMEOUT` (default 30). There's no authentication yet (#30), so don't expose a deployment publicly.
+
 ## Backend Notes
 
 The backend defaults to development settings via `config.settings`.

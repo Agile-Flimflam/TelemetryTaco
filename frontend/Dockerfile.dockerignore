@@ -1,0 +1,10 @@
+# The frontend image builds from the repo root; send only what it needs.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!frontend/
+frontend/node_modules
+frontend/dist
+frontend/coverage
+frontend/.env*

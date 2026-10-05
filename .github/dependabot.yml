@@ -28,6 +28,15 @@ updates:
       frontend-minor-and-patch:
         update-types: [minor, patch]
 
+  # Base images in backend/Dockerfile and frontend/Dockerfile.
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule:
+      interval: weekly
+    groups:
+      base-images:
+        patterns: ["*"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
