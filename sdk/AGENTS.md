@@ -29,10 +29,19 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 ## Testing
 
 ```bash
-pnpm test:sdk            # from the repo root, as CI runs it
+pnpm test:sdk            # quick local run from the repo root
 ```
 
 That runs pytest from `sdk/` using the backend's Poetry interpreter. Running from `sdk/` matters, because the backend's Django project is also named `telemetry_taco` and would shadow the SDK elsewhere.
+
+CI is stricter: it installs the SDK into a clean venv and runs the tests against the installed package, on Python 3.11, 3.12 and 3.13. To reproduce that locally:
+
+```bash
+python -m venv /tmp/sdk-venv && /tmp/sdk-venv/bin/pip install ./sdk pytest
+/tmp/sdk-venv/bin/pytest -o pythonpath= sdk/tests
+```
+
+That catches a missing file in the package, or a dependency that only exists in the backend's environment.
 
 - Patch `urllib.request.urlopen` instead of making real requests.
 - Use `_start_worker=False` to test queue behavior without a thread.
