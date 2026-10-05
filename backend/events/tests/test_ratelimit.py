@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from django.core.cache import cache
 from django.test import RequestFactory
@@ -65,3 +67,53 @@ def test_forwarded_clients_get_separate_buckets_behind_a_trusted_proxy(settings)
     assert _hit(_request(forwarded_for="203.0.113.7")) is False
     assert _hit(_request(forwarded_for="198.51.100.9")) is False
     assert _hit(_request(forwarded_for="203.0.113.7")) is True
+
+
+@pytest.mark.django_db
+def test_capture_over_the_limit_returns_429_with_retry_after(client, settings):
+    settings.RATE_LIMIT_CAPTURE_EVENT = "1/m"
+    payload = {"events": [{"distinct_id": "user-1", "event_name": "page_view"}]}
+
+    first = client.post("/api/capture/batch", data=payload, content_type="application/json")
+    second = client.post("/api/capture/batch", data=payload, content_type="application/json")
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second["Content-Type"] == "application/json; charset=utf-8"
+    assert second.json()["detail"].startswith("Rate limit exceeded")
+    assert 1 <= int(second["Retry-After"]) <= 61
+
+
+@pytest.mark.django_db
+def test_reads_over_the_limit_return_429(client, settings):
+    settings.RATE_LIMIT_LIST_EVENTS = "1/m"
+
+    assert client.get("/api/events").status_code == 200
+    assert client.get("/api/events").status_code == 429
+
+
+@pytest.mark.django_db
+def test_rate_limits_can_be_turned_off(client, settings):
+    settings.RATE_LIMIT_CAPTURE_EVENT = "1/m"
+    settings.RATELIMIT_ENABLE = False
+    payload = {"distinct_id": "user-1", "event_name": "page_view"}
+
+    for _ in range(3):
+        response = client.post("/api/capture", data=payload, content_type="application/json")
+        assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_retry_after_is_exactly_when_the_limit_resets(client, settings):
+    settings.RATE_LIMIT_LIST_EVENTS = "1/m"
+    now = 1_700_000_000.5
+
+    with patch("django_ratelimit.core.time.time", side_effect=lambda: now):
+        client.get("/api/events")
+        retry_after = int(client.get("/api/events")["Retry-After"])
+
+        now += retry_after - 1
+        assert client.get("/api/events").status_code == 429
+
+        now += 1
+        assert client.get("/api/events").status_code == 200

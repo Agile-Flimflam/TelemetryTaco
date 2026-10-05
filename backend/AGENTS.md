@@ -21,7 +21,7 @@ backend/
     ├── tasks/               # Celery tasks; persistence happens here
     ├── models.py            # Event
     ├── management/commands/ # check_db, seed_events, purge_expired_events, export_openapi_schema
-    └── tests/               # pytest: test_api.py (HTTP), test_tasks.py (worker), test_commands.py
+    └── tests/               # pytest, one module per endpoint or layer; factories.py; SDK integration test
 ```
 
 ## Where code goes
@@ -75,6 +75,9 @@ docker compose up -d db
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco poetry run pytest
 ```
 
+- Tests are split by what they exercise: `test_capture.py`, `test_events.py`, `test_insights.py`, `test_stats.py` and `test_health.py` for the endpoints, then `test_services.py`, `test_tasks.py`, `test_retention.py`, `test_ratelimit.py`, `test_commands.py` and `test_logging.py`. Add a test next to the ones like it.
+- Create rows with `make_event(...)` from `events/tests/factories.py`. Pass only the fields the test is about.
+- `test_sdk_integration.py` runs the real SDK from `sdk/` against `live_server`. If you change the capture API or the SDK, it shows whether they still agree.
 - Use the `client` fixture for HTTP-level tests, and `@pytest.mark.django_db` for anything touching the DB.
 - Use the pytest-django `settings` fixture to override limits per test (see `test_capture_batch_rejects_oversized_batch`).
 - Call task bodies directly with `.run(...)` in task tests.

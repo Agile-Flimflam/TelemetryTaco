@@ -1,12 +1,11 @@
 from datetime import datetime
 
-from django.conf import settings
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django_ratelimit.decorators import ratelimit
 from ninja import Router
 from ninja.errors import HttpError
 
+from events.api.ratelimit import rate_limit
 from events.api.schemas import (
     BatchStatusResponse,
     EventBatchCaptureSchema,
@@ -61,21 +60,21 @@ def _enqueue(events: list[EventCaptureSchema]) -> int:
 
 
 @router.post("/capture", response=StatusResponse)
-@ratelimit(key="ip", rate=settings.RATE_LIMIT_CAPTURE_EVENT, method="POST", block=True)
+@rate_limit("RATE_LIMIT_CAPTURE_EVENT", method="POST")
 def capture_event(request, event: EventCaptureSchema) -> StatusResponse:
     _enqueue([event])
     return StatusResponse(status="ok")
 
 
 @router.post("/capture/batch", response=BatchStatusResponse)
-@ratelimit(key="ip", rate=settings.RATE_LIMIT_CAPTURE_EVENT, method="POST", block=True)
+@rate_limit("RATE_LIMIT_CAPTURE_EVENT", method="POST")
 def capture_event_batch(request, payload: EventBatchCaptureSchema) -> BatchStatusResponse:
     accepted = _enqueue(payload.events)
     return BatchStatusResponse(status="ok", accepted=accepted)
 
 
 @router.get("/events", response=list[EventResponseSchema])
-@ratelimit(key="ip", rate=settings.RATE_LIMIT_LIST_EVENTS, method="GET", block=True)
+@rate_limit("RATE_LIMIT_LIST_EVENTS", method="GET")
 def list_events(request, limit: int = 100, before: str | None = None):
     if limit < 1:
         raise HttpError(400, "limit must be greater than zero")
@@ -84,7 +83,7 @@ def list_events(request, limit: int = 100, before: str | None = None):
 
 
 @router.get("/insights", response=list[InsightDataPoint])
-@ratelimit(key="ip", rate=settings.RATE_LIMIT_GET_INSIGHTS, method="GET", block=True)
+@rate_limit("RATE_LIMIT_GET_INSIGHTS", method="GET")
 def get_event_insights(request, lookback_minutes: int = 60):
     if lookback_minutes < 1:
         raise HttpError(400, "lookback_minutes must be greater than zero")
@@ -93,7 +92,7 @@ def get_event_insights(request, lookback_minutes: int = 60):
 
 
 @router.get("/stats", response=EventStatsResponse)
-@ratelimit(key="ip", rate=settings.RATE_LIMIT_GET_INSIGHTS, method="GET", block=True)
+@rate_limit("RATE_LIMIT_GET_INSIGHTS", method="GET")
 def get_stats(request):
     return get_event_stats()
 
