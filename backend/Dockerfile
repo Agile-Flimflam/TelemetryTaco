@@ -51,8 +51,9 @@ RUN SECRET_KEY="collectstatic-only-$(python -c 'import secrets; print(secrets.to
 
 USER app
 EXPOSE 8000
+# Probes /api/health/live in the API process; worker and beat containers report healthy.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen(f\"http://localhost:{os.environ.get('PORT', '8000')}/api/health/live\", timeout=4)"]
+    CMD ["python", "healthcheck.py"]
 # Run the worker and beat from this image with `celery -A config worker` and
 # `celery -A config beat --schedule /tmp/celerybeat-schedule` (/app isn't writable).
 CMD ["gunicorn", "config.wsgi"]
