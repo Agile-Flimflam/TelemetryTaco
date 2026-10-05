@@ -46,7 +46,7 @@ CI regenerates both files and fails on any diff. If the backend changed, regener
 - Styling is Tailwind utility classes plus the CSS variables in `src/index.css` (`hsl(var(--primary))` etc.). Use `cn()` to merge classes, and avoid hard-coded colors when a theme token exists. The look is a dark UI with amber/orange accents.
 - Import with `@/…`, never with deep `../../`.
 - File names are kebab-case (`live-event-stream-card.tsx`). Component names are PascalCase, and hooks are `useXxxQuery`.
-- Polling intervals live in `src/shared/api/polling.ts`, and the query hooks read them from there. Each viewer's polls count against the backend's per-IP rate limits (a 10 s interval is 360 requests per hour), so `polling.test.ts` checks every interval against the production defaults in `backend/telemetry_taco/settings/base.py`.
+- Polling intervals live in `src/shared/api/polling.ts`, and the query hooks read them from there. Each viewer's polls count against the backend's per-IP rate limits (a 10 s interval is 360 requests per hour), so `polling.test.ts` checks every interval against the production defaults in `backend/config/settings/base.py`.
 - Heavy dependencies (Recharts) are lazy-loaded. Keep them out of the initial bundle.
 - Every async view needs a visible error state. Use `PanelMessage` with `tone="error"`.
 - Each dashboard card is wrapped in `CardErrorBoundary` in `app/App.tsx`, so a render bug in one card doesn't blank the page. Wrap new cards the same way.

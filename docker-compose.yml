@@ -66,7 +66,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A core worker --loglevel=info
+    command: celery -A config worker --loglevel=info
 
   # Runs scheduled tasks (CELERY_BEAT_SCHEDULE), such as the hourly retention purge. Keep exactly
   # one, or each task runs once per beat process.
@@ -81,7 +81,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    command: celery -A core beat --loglevel=info --schedule /tmp/celerybeat-schedule
+    command: celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule
 
 volumes:
   postgres_data:

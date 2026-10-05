@@ -61,12 +61,12 @@ jobs:
 
       - name: Django system check
         env:
-          DJANGO_SETTINGS_MODULE: telemetry_taco.settings.test
+          DJANGO_SETTINGS_MODULE: config.settings.test
         run: poetry run python manage.py check
 
       - name: Verify committed OpenAPI schema
         env:
-          DJANGO_SETTINGS_MODULE: telemetry_taco.settings.test
+          DJANGO_SETTINGS_MODULE: config.settings.test
         run: |
           poetry run python manage.py export_openapi_schema ../frontend/openapi.json
           git diff --exit-code ../frontend/openapi.json

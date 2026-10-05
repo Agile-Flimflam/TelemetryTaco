@@ -30,9 +30,10 @@ install: ## Install all dependencies
 	cd frontend && pnpm install
 	@echo "✅ Dependencies installed"
 
+# --fake-initial adopts the core_event table in databases from before the core -> events rename.
 migrate: install ## Run database migrations (installs dependencies first)
 	@echo "🔄 Running migrations..."
-	cd backend && poetry run python manage.py migrate
+	cd backend && poetry run python manage.py migrate --fake-initial
 
 dev: services install migrate ## Start all development servers (backend, worker, frontend)
 	@echo "🚀 Starting development servers..."
@@ -41,7 +42,7 @@ dev: services install migrate ## Start all development servers (backend, worker,
 	@echo ""
 	@echo "Starting in background..."
 	@cd backend && poetry run python manage.py runserver > ../.backend.log 2>&1 & echo $$! > ../.backend.pid
-	@cd backend && poetry run celery -A core worker -B --loglevel=info > ../.celery.log 2>&1 & echo $$! > ../.celery.pid
+	@cd backend && poetry run celery -A config worker -B --loglevel=info > ../.celery.log 2>&1 & echo $$! > ../.celery.pid
 	@echo "✅ Backend and Celery started in background"
 	@echo "▶️  Starting frontend (foreground)..."
 	@cd frontend && pnpm dev

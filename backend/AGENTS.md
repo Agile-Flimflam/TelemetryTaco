@@ -6,11 +6,12 @@ Django 5 + Django Ninja API, Celery worker, Postgres. Read the root [`AGENTS.md`
 
 ```
 backend/
-├── telemetry_taco/          # Django *project*: settings, urls, NinjaAPI instance
+├── config/                  # Django *project*: settings, urls, NinjaAPI instance, Celery app
 │   ├── settings/            # base.py, development.py (default), test.py, production.py
-│   ├── api.py               # NinjaAPI(); mounts core.api.router at /api/
+│   ├── api.py               # NinjaAPI(); mounts events.api.router at /api/
+│   ├── celery.py            # Celery app (autodiscovers tasks); run with `celery -A config`
 │   └── urls.py
-└── core/                    # the one Django app
+└── events/                  # the one Django app
     ├── api/
     │   ├── events.py        # Ninja router: HTTP only (parse, validate, map errors, status codes)
     │   └── schemas.py       # Pydantic/Ninja request + response schemas
@@ -19,7 +20,6 @@ backend/
     ├── tasks/               # Celery tasks; persistence happens here
     ├── models.py            # Event
     ├── management/commands/ # check_db, seed_events, purge_expired_events, export_openapi_schema
-    ├── celery.py            # Celery app (autodiscovers tasks)
     └── tests/               # pytest: test_api.py (HTTP), test_tasks.py (worker), test_commands.py
 ```
 
@@ -27,12 +27,12 @@ backend/
 
 | You are adding… | Put it in | Notes |
 |---|---|---|
-| A new endpoint | `core/api/events.py` (or a new router module wired up in `core/api/__init__.py`) | Keep handlers thin. Call a service or selector. |
-| Request or response shape | `core/api/schemas.py` | Every input and output is a schema, never a raw `dict` or `request.body`. |
-| A read query | `core/selectors/` | Keyword-only args, bounded by a `settings.MAX_*` limit. |
-| A write or side effect | `core/services/` | Returns plain data. |
-| Background work | `core/tasks/`, re-exported from `core/tasks/__init__.py` | Must be idempotent and safe to retry. |
-| A config knob | `telemetry_taco/settings/base.py` via `env(...)` | Also add it to `.env.example`. |
+| A new endpoint | `events/api/events.py` (or a new router module wired up in `events/api/__init__.py`) | Keep handlers thin. Call a service or selector. |
+| Request or response shape | `events/api/schemas.py` | Every input and output is a schema, never a raw `dict` or `request.body`. |
+| A read query | `events/selectors/` | Keyword-only args, bounded by a `settings.MAX_*` limit. |
+| A write or side effect | `events/services/` | Returns plain data. |
+| Background work | `events/tasks/`, re-exported from `events/tasks/__init__.py` | Must be idempotent and safe to retry. |
+| A config knob | `config/settings/base.py` via `env(...)` | Also add it to `.env.example`. |
 
 ## Ingestion path (don't break it)
 
@@ -52,8 +52,8 @@ Task arguments must stay JSON-serializable (`CELERY_TASK_SERIALIZER = "json"`), 
 
 ## Settings and environment
 
-- `DJANGO_SETTINGS_MODULE` defaults to `telemetry_taco.settings`, which loads **development**.
-- Tests use `telemetry_taco.settings.test` (configured in `pyproject.toml`): in-memory SQLite unless `TEST_DATABASE_URL` is set, LocMem cache, `CELERY_TASK_ALWAYS_EAGER=True`, effectively unlimited rate limits. By default tests need no Postgres or Redis.
+- `DJANGO_SETTINGS_MODULE` defaults to `config.settings`, which loads **development**.
+- Tests use `config.settings.test` (configured in `pyproject.toml`): in-memory SQLite unless `TEST_DATABASE_URL` is set, LocMem cache, `CELERY_TASK_ALWAYS_EAGER=True`, effectively unlimited rate limits. By default tests need no Postgres or Redis.
 - Production refuses to start with the default or a short `SECRET_KEY`.
 - `base.py` reads `backend/.env` if present. Never commit `.env`.
 
@@ -61,7 +61,7 @@ Task arguments must stay JSON-serializable (`CELERY_TASK_SERIALIZER = "json"`), 
 
 ```bash
 poetry run pytest                          # all
-poetry run pytest core/tests/test_api.py   # one file
+poetry run pytest events/tests/test_api.py   # one file
 poetry run pytest -k idempotent            # by name
 poetry run pytest --cov                    # with coverage, as CI runs it
 
@@ -78,7 +78,7 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco p
 
 ## Migrations
 
-- Run `poetry run python manage.py makemigrations core`, then read the generated file.
+- Run `poetry run python manage.py makemigrations events`, then read the generated file.
 - Keep `db_table = "core_event"` stable.
 - Don't edit migrations that are already on `main`. Add a new one.
 
@@ -86,7 +86,7 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/telemetry_taco p
 
 ```bash
 poetry run ruff check . && poetry run ruff format --check .
-DJANGO_SETTINGS_MODULE=telemetry_taco.settings.test poetry run python manage.py check
+DJANGO_SETTINGS_MODULE=config.settings.test poetry run python manage.py check
 poetry run pytest
 poetry run bandit -r . -c bandit.yaml       # CI runs this too
 poetry run python manage.py check_db        # optional: is the dev database reachable?

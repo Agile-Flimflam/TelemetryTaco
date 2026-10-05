@@ -54,7 +54,7 @@ pnpm validate:all
 Narrower loops while iterating:
 
 ```bash
-cd backend && poetry run pytest core/tests/test_api.py -k cursor   # one backend test
+cd backend && poetry run pytest events/tests/test_api.py -k cursor   # one backend test
 cd backend && poetry run ruff check --fix . && poetry run ruff format .
 cd frontend && pnpm vitest run src/features/events                 # one frontend folder
 cd frontend && pnpm lint && pnpm type-check
@@ -100,9 +100,8 @@ Before you call a change finished:
 
 These are known rough edges. Don't paper over them silently in an unrelated change, but feel free to fix one as its own focused PR.
 
-- **Two packages are named `telemetry_taco`.** One is the Django project (`backend/telemetry_taco/`) and the other is the SDK (`sdk/telemetry_taco/`). Never install the SDK into the backend environment. The SDK tests only work because they run from inside `sdk/`.
 - **There is no authentication.** Every endpoint is public. Don't build features that assume a user or project exists without adding that layer first.
-- **Rate limits are per client IP.** That's `REMOTE_ADDR` unless `TRUSTED_PROXY_COUNT` is set, in which case it's read from `X-Forwarded-For` (`core/api/ratelimit.py`). They're configured with `RATE_LIMIT_*` settings, and the test settings set them effectively unlimited.
+- **Rate limits are per client IP.** That's `REMOTE_ADDR` unless `TRUSTED_PROXY_COUNT` is set, in which case it's read from `X-Forwarded-For` (`events/api/ratelimit.py`). They're configured with `RATE_LIMIT_*` settings, and the test settings set them effectively unlimited.
 - **Event time comes from `timestamp`, corrected by `sent_at`.** `services/ingestion.py` keeps the client's `sent_at - timestamp` gap and anchors it to the server's receive time. A `sent_at` alone is still stored as the event time, because older clients sent it that way.
 - **Several overlapping ways to run things** exist: `start.sh`, `stop.sh`, `restart-backend.sh`, `seed.sh`, the `Makefile` and root `package.json` scripts. Prefer the `pnpm` scripts above, and don't add new shell scripts.
 
