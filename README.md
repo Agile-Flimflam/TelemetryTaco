@@ -155,7 +155,7 @@ with TelemetryTaco(base_url="http://localhost:8000") as client:
     )
 ```
 
-The SDK batches events in a background worker, attaches `event_uuid`, `timestamp` and `sent_at`, and flushes automatically when the context manager exits. Pass `timestamp=` to `capture()` to record an event that happened earlier, such as a backfill.
+The SDK batches events in a background worker, attaches `event_uuid`, `timestamp` and `sent_at`, and flushes automatically when the context manager exits. Pass `timestamp=` to `capture()` to record an event that happened earlier, such as a backfill. If a script exits without closing the client, queued events are still sent at exit, waiting at most `exit_timeout` seconds (default 5).
 
 ## API Summary
 
