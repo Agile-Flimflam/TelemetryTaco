@@ -41,7 +41,7 @@ dev: services install migrate ## Start all development servers (backend, worker,
 	@echo ""
 	@echo "Starting in background..."
 	@cd backend && poetry run python manage.py runserver > ../.backend.log 2>&1 & echo $$! > ../.backend.pid
-	@cd backend && poetry run celery -A core worker --loglevel=info > ../.celery.log 2>&1 & echo $$! > ../.celery.pid
+	@cd backend && poetry run celery -A core worker -B --loglevel=info > ../.celery.log 2>&1 & echo $$! > ../.celery.pid
 	@echo "✅ Backend and Celery started in background"
 	@echo "▶️  Starting frontend (foreground)..."
 	@cd frontend && pnpm dev

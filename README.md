@@ -114,7 +114,7 @@ Important environment variables:
 
 Rate limits are per client IP. Behind a reverse proxy or load balancer, every request arrives from the proxy's address, so all clients would share one limit. Set `TRUSTED_PROXY_COUNT` to the number of proxies in front of the backend (usually 1) and the client IP is read from `X-Forwarded-For` instead. Leave it at 0 when clients can reach the backend directly, since they could forge that header.
 
-Retention cleanup is exposed as a management command:
+Events older than `EVENT_RETENTION_DAYS` (0 disables it) are purged every hour by Celery beat, in chunks of `EVENT_RETENTION_DELETE_BATCH_SIZE` rows. Docker Compose runs beat as its own `beat` service, and the development worker (`pnpm dev:worker`, `make dev`, `./start.sh`) runs it embedded with `-B`. In production, run exactly one `celery -A core beat` process. You can also purge by hand:
 
 ```bash
 cd backend

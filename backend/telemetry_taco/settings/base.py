@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -144,6 +145,16 @@ MAX_EVENT_PROPERTIES_BYTES = env.int("MAX_EVENT_PROPERTIES_BYTES", default=32 * 
 MAX_EVENTS_LIMIT = env.int("MAX_EVENTS_LIMIT", default=200)
 MAX_INSIGHTS_LOOKBACK_MINUTES = env.int("MAX_INSIGHTS_LOOKBACK_MINUTES", default=24 * 60)
 EVENT_RETENTION_DAYS = env.int("EVENT_RETENTION_DAYS", default=30)
+EVENT_RETENTION_DELETE_BATCH_SIZE = env.int("EVENT_RETENTION_DELETE_BATCH_SIZE", default=10_000)
+
+# Needs a beat process: `celery -A core beat` (its own service in docker-compose.yml), or
+# `celery -A core worker -B` for a single development worker. Hourly keeps each purge small.
+CELERY_BEAT_SCHEDULE = {
+    "purge-expired-events": {
+        "task": "core.tasks.events.purge_expired_events_task",
+        "schedule": crontab(minute=17),
+    },
+}
 
 LOGGING = {
     "version": 1,

@@ -10,7 +10,7 @@
     "stop": "bash stop.sh",
     "dev:frontend": "pnpm --filter ./frontend dev",
     "dev:backend": "cd backend && poetry run python manage.py runserver",
-    "dev:worker": "cd backend && poetry run celery -A core worker --loglevel=info",
+    "dev:worker": "cd backend && poetry run celery -A core worker -B --loglevel=info",
     "restart:backend": "bash restart-backend.sh",
     "services": "docker-compose up -d db redis",
     "services:stop": "docker-compose stop db redis",

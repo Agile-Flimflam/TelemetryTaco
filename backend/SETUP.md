@@ -65,7 +65,7 @@ poetry run python manage.py runserver
 Start the worker in another shell:
 
 ```bash
-poetry run celery -A core worker --loglevel=info
+poetry run celery -A core worker -B --loglevel=info
 ```
 
 ## Validation
