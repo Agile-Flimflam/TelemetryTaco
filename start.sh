@@ -99,7 +99,9 @@ cd ..
 # Step 4: Run migrations
 echo -e "${YELLOW}🔄 Running database migrations...${NC}"
 cd backend
-POETRY_CACHE_DIR="${POETRY_CACHE_DIR}" poetry run python manage.py migrate --noinput
+# --fake-initial adopts the existing core_event table in databases created before the
+# core -> events app rename; on a new database it migrates normally.
+POETRY_CACHE_DIR="${POETRY_CACHE_DIR}" poetry run python manage.py migrate --noinput --fake-initial
 cd ..
 
 # Step 5: Start services

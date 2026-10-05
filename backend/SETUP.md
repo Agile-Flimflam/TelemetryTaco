@@ -56,7 +56,7 @@ Run migrations:
 poetry run python manage.py migrate
 ```
 
-A database created before the Django app was renamed from `core` to `events` already has the `core_event` table, so run `poetry run python manage.py migrate --fake-initial` once instead.
+A database created before the Django app was renamed from `core` to `events` already has the `core_event` table, so plain `migrate` fails with `relation "core_event" already exists`. Run `poetry run python manage.py migrate --fake-initial` once instead. `pnpm migrate`, `make migrate` and `./start.sh` already pass `--fake-initial`.
 
 Start the API server:
 

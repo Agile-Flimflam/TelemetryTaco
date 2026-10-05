@@ -30,9 +30,10 @@ install: ## Install all dependencies
 	cd frontend && pnpm install
 	@echo "✅ Dependencies installed"
 
+# --fake-initial adopts the core_event table in databases from before the core -> events rename.
 migrate: install ## Run database migrations (installs dependencies first)
 	@echo "🔄 Running migrations..."
-	cd backend && poetry run python manage.py migrate
+	cd backend && poetry run python manage.py migrate --fake-initial
 
 dev: services install migrate ## Start all development servers (backend, worker, frontend)
 	@echo "🚀 Starting development servers..."
