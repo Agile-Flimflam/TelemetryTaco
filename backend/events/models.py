@@ -16,8 +16,8 @@ class Event(models.Model):
     uuid = models.UUIDField(
         default=uuid.uuid4, unique=True, editable=False, help_text="UUID for idempotency"
     )
+    # Events are immutable once stored, so there's no updated_at.
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         # Kept from when this app was named `core`, so the rename left the table alone.
@@ -25,8 +25,11 @@ class Event(models.Model):
         indexes = [
             models.Index(fields=["distinct_id", "timestamp"]),
             models.Index(fields=["event_name", "timestamp"]),
+            # Matches the /api/events keyset pagination order.
+            models.Index(fields=["-timestamp", "-id"], name="core_event_ts_id_desc_idx"),
         ]
-        ordering = ["-timestamp"]
+        # No default ordering: it would add a sort to every query, aggregates included.
+        # Queries order explicitly.
 
     def __str__(self) -> str:
         return f"{self.event_name} - {self.distinct_id} - {self.timestamp}"

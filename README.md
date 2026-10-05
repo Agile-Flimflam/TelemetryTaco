@@ -127,6 +127,7 @@ Important environment variables:
 - `EVENT_RETENTION_DAYS`
 - `RATE_LIMIT_CAPTURE_EVENT`, `RATE_LIMIT_LIST_EVENTS`, `RATE_LIMIT_GET_INSIGHTS` (per client IP, for example `1000/h`)
 - `TRUSTED_PROXY_COUNT`
+- `LOG_FORMAT` (`text`, or `json` for log collectors; production defaults to `json`) and `LOG_LEVEL`
 
 Rate limits are per client IP. Behind a reverse proxy or load balancer, every request arrives from the proxy's address, so all clients would share one limit. Set `TRUSTED_PROXY_COUNT` to the number of proxies in front of the backend (usually 1) and the client IP is read from `X-Forwarded-For` instead. Leave it at 0 when clients can reach the backend directly, since they could forge that header.
 

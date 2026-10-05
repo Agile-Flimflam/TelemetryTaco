@@ -1,6 +1,7 @@
 import os
+from typing import Any
 
-from celery import Celery
+from celery import Celery, signals
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -15,3 +16,10 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+
+
+# Connecting any receiver stops Celery from replacing the logging config with its own, so the
+# worker and beat log through Django's LOGGING like the web process.
+@signals.setup_logging.connect
+def use_django_logging(**kwargs: Any) -> None:
+    pass

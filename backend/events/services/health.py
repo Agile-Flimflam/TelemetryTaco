@@ -1,14 +1,21 @@
+from dataclasses import dataclass
+
 from django.core.cache import caches
 from django.db import connections
 
-from events.api.schemas import HealthStatusResponse
+
+@dataclass(frozen=True)
+class HealthStatus:
+    status: str
+    database: str
+    cache: str
 
 
-def get_liveness_status() -> HealthStatusResponse:
-    return HealthStatusResponse(status="ok", database="unchecked", cache="unchecked")
+def get_liveness_status() -> HealthStatus:
+    return HealthStatus(status="ok", database="unchecked", cache="unchecked")
 
 
-def get_readiness_status() -> HealthStatusResponse:
+def get_readiness_status() -> HealthStatus:
     database_status = "ok"
     cache_status = "ok"
 
@@ -28,4 +35,4 @@ def get_readiness_status() -> HealthStatusResponse:
         cache_status = "error"
 
     status = "ok" if database_status == "ok" and cache_status == "ok" else "degraded"
-    return HealthStatusResponse(status=status, database=database_status, cache=cache_status)
+    return HealthStatus(status=status, database=database_status, cache=cache_status)

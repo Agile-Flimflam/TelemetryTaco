@@ -1,14 +1,25 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.utils import timezone
-from ninja.errors import HttpError
 
-from events.api.schemas import EventCaptureSchema
+from events.services.exceptions import InvalidBatchError
 from events.tasks import process_event_batch_task
+
+
+@dataclass(frozen=True)
+class CapturedEvent:
+    """An event as the client sent it, already validated by the API schema."""
+
+    distinct_id: str
+    event_name: str
+    properties: dict[str, Any] = field(default_factory=dict)
+    event_uuid: UUID | None = None
+    timestamp: datetime | None = None
+    sent_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -50,7 +61,7 @@ def _resolve_event_time(
     return event_time
 
 
-def _normalize_event(event: EventCaptureSchema, *, received_at: datetime) -> NormalizedEvent:
+def _normalize_event(event: CapturedEvent, *, received_at: datetime) -> NormalizedEvent:
     return NormalizedEvent(
         distinct_id=event.distinct_id,
         event_name=event.event_name,
@@ -72,14 +83,13 @@ def _serialize_event(event: NormalizedEvent) -> dict[str, Any]:
     }
 
 
-def enqueue_events(events: list[EventCaptureSchema]) -> int:
+def enqueue_events(events: list[CapturedEvent]) -> int:
     if not events:
-        raise HttpError(400, "events must contain at least one event")
+        raise InvalidBatchError("events must contain at least one event")
 
     if len(events) > settings.MAX_CAPTURE_BATCH_SIZE:
-        raise HttpError(
-            400,
-            f"batch size exceeds maximum of {settings.MAX_CAPTURE_BATCH_SIZE} events",
+        raise InvalidBatchError(
+            f"batch size exceeds maximum of {settings.MAX_CAPTURE_BATCH_SIZE} events"
         )
 
     received_at = timezone.now()
