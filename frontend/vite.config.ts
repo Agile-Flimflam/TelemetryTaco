@@ -18,7 +18,8 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // docker compose points this at the backend service.
+        target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
       },

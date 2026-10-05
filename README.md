@@ -48,45 +48,45 @@ Python SDK / API clients
 
 ## Quick Start
 
-### Prerequisites
+With Docker, one command runs the whole stack (Postgres, Redis, the API, the Celery worker and beat, and the dashboard) and seeds demo events on first boot:
 
-- Python 3.11, 3.12, or 3.13
-- Poetry
-- Node.js 22.22+ or 24 and `pnpm`
-- Docker and Docker Compose
+```bash
+docker compose up
+```
+
+Open http://localhost:5173. The API is on http://localhost:8000. `docker compose down` stops it and keeps your data, and `docker compose down -v` deletes it.
 
 ### Local development
 
-1. Copy backend environment defaults:
+Prerequisites:
+
+- Python 3.11, 3.12, or 3.13
+- Poetry 2.x
+- Node.js 22.22+ or 24 and `pnpm`
+- Docker, for Postgres and Redis
+- `make`
 
 ```bash
-cp backend/.env.example backend/.env
+make setup   # install backend and frontend dependencies
+make dev     # Postgres and Redis in Docker, then the API, worker, beat and frontend
+make seed    # optional: add demo events
 ```
 
-2. Start the database and Redis:
+The settings defaults match `make dev`. To change one, copy `backend/.env.example` to `backend/.env` and edit it.
 
-```bash
-docker-compose up -d db redis
-```
-
-3. Start the application stack:
-
-```bash
-./start.sh
-```
-
-That script will install backend dependencies, run migrations, start Django and Celery in the background, and run the frontend in the foreground.
+`make dev` runs the processes in `Procfile.dev` with [honcho](https://honcho.readthedocs.io/), in one terminal with one log stream. Ctrl-C stops all of them. `make down` stops Postgres and Redis.
 
 ### Useful commands
 
+`make help` lists every target. The common ones:
+
 ```bash
-pnpm generate:api-types   # export backend OpenAPI and regenerate frontend types
-pnpm validate:backend     # Ruff + format check + Django check + backend pytest
-pnpm validate:frontend    # OpenAPI type generation + lint + type-check + Vitest
-pnpm validate:all         # backend + frontend + SDK validation
-pnpm test                 # backend + frontend + SDK tests
-pnpm seed                 # seed realistic sample events
-pnpm seed:clean           # wipe and reseed events
+make types       # export the backend OpenAPI schema and regenerate frontend types
+make lint        # Ruff, Bandit, ESLint and tsc
+make fmt         # fix lint issues and format the backend
+make test        # backend, frontend and SDK tests
+make validate    # what CI runs that needs no Docker: types, lint, Django check, tests, build
+make seed ARGS="--clean --count 5000"   # wipe and reseed demo events
 ```
 
 ## Backend Notes
@@ -114,7 +114,7 @@ Important environment variables:
 
 Rate limits are per client IP. Behind a reverse proxy or load balancer, every request arrives from the proxy's address, so all clients would share one limit. Set `TRUSTED_PROXY_COUNT` to the number of proxies in front of the backend (usually 1) and the client IP is read from `X-Forwarded-For` instead. Leave it at 0 when clients can reach the backend directly, since they could forge that header.
 
-Events older than `EVENT_RETENTION_DAYS` (0 disables it) are purged every hour by Celery beat, in chunks of `EVENT_RETENTION_DELETE_BATCH_SIZE` rows. Docker Compose runs beat as its own `beat` service, and the development worker (`pnpm dev:worker`, `make dev`, `./start.sh`) runs it embedded with `-B`. In production, run exactly one `celery -A config beat` process. You can also purge by hand:
+Events older than `EVENT_RETENTION_DAYS` (0 disables it) are purged every hour by Celery beat, in chunks of `EVENT_RETENTION_DELETE_BATCH_SIZE` rows. Docker Compose and `make dev` both run beat as its own process. In production, run exactly one `celery -A config beat` process. You can also purge by hand:
 
 ```bash
 cd backend
@@ -139,8 +139,10 @@ The dashboard is a Vite React app that uses:
 If the backend contract changes, regenerate types before committing:
 
 ```bash
-pnpm generate:api-types
+make types
 ```
+
+The dev server proxies `/api` to `http://localhost:8000`. Set `API_PROXY_TARGET` to proxy somewhere else; `docker compose` sets it to the `backend` service.
 
 ## SDK Example
 
@@ -233,7 +235,7 @@ Returns a summary of the last 24 hours plus when the most recent event arrived:
 
 ## Developer Workflow
 
-- Use `pnpm` at the repo root for day-to-day commands.
+- Use the `Makefile` at the repo root for day-to-day commands (`make help`).
 - Treat `backend/poetry.lock` and `pnpm-lock.yaml` as the dependency source of truth.
 - Do not reintroduce `npm` lockfiles or a standalone backend `requirements.txt`.
 - Keep frontend API types generated from the backend schema, not hand-maintained.

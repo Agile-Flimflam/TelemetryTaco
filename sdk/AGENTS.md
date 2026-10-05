@@ -29,7 +29,7 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 ## Testing
 
 ```bash
-pnpm test:sdk            # quick local run from the repo root
+make test-sdk           # quick local run from the repo root
 ```
 
 That runs pytest from `sdk/` using the backend's Poetry interpreter.

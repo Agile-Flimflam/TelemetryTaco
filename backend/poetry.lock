@@ -489,6 +489,25 @@ image = ["pillow"]
 tzdata = ["tzdata"]
 
 [[package]]
+name = "honcho"
+version = "2.0.0"
+description = "Honcho: a Python clone of Foreman. For managing Procfile-based applications."
+optional = false
+python-versions = "*"
+groups = ["dev"]
+files = [
+    {file = "honcho-2.0.0-py3-none-any.whl", hash = "sha256:56dcd04fc72d362a4befb9303b1a1a812cba5da283526fbc6509be122918ddf3"},
+    {file = "honcho-2.0.0.tar.gz", hash = "sha256:af3815c03c634bf67d50f114253ea9fef72ecff26e4fd06b29234789ac5b8b2e"},
+]
+
+[package.dependencies]
+colorama = {version = "*", markers = "sys_platform == \"win32\""}
+
+[package.extras]
+docs = ["sphinx"]
+export = ["jinja2 (>=3.1.2,<4)"]
+
+[[package]]
 name = "iniconfig"
 version = "2.3.0"
 description = "brain-dead simple config-ini parsing"
@@ -1239,4 +1258,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11,<3.14"
-content-hash = "7852cead8867714b6fa49c55e9274d6706902cabd21b0d4dac7987da518be4d8"
+content-hash = "c32463663894342e5c2526979b917dd1aade173ad8ca0d95cbcb7ced959456a2"
