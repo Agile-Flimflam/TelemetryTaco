@@ -10,12 +10,13 @@ backend/
 │   ├── settings/            # base.py, development.py (default), test.py, production.py
 │   ├── api.py               # NinjaAPI(); mounts events.api.router at /api/
 │   ├── celery.py            # Celery app (autodiscovers tasks); run with `celery -A config`
+│   ├── logging.py           # text and JSON log formatters that keep `extra` fields
 │   └── urls.py
 └── events/                  # the one Django app
     ├── api/
     │   ├── events.py        # Ninja router: HTTP only (parse, validate, map errors, status codes)
     │   └── schemas.py       # Pydantic/Ninja request + response schemas
-    ├── services/            # business logic and side effects (ingestion, health)
+    ├── services/            # business logic and side effects (ingestion, retention, health)
     ├── selectors/           # read queries: return model instances or plain data
     ├── tasks/               # Celery tasks; persistence happens here
     ├── models.py            # Event
@@ -30,13 +31,13 @@ backend/
 | A new endpoint | `events/api/events.py` (or a new router module wired up in `events/api/__init__.py`) | Keep handlers thin. Call a service or selector. |
 | Request or response shape | `events/api/schemas.py` | Every input and output is a schema, never a raw `dict` or `request.body`. |
 | A read query | `events/selectors/` | Keyword-only args, bounded by a `settings.MAX_*` limit. |
-| A write or side effect | `events/services/` | Returns plain data. |
+| A write or side effect | `events/services/` | Takes and returns plain data (dataclasses), never schemas. Raises a domain exception from `services/exceptions.py`, which the router maps to a status code. Never imports from `events.api` or Ninja. |
 | Background work | `events/tasks/`, re-exported from `events/tasks/__init__.py` | Must be idempotent and safe to retry. |
 | A config knob | `config/settings/base.py` via `env(...)` | Also add it to `.env.example`. |
 
 ## Ingestion path (don't break it)
 
-1. `POST /api/capture` or `/api/capture/batch` → `EventCaptureSchema` validates the payload.
+1. `POST /api/capture` or `/api/capture/batch` → `EventCaptureSchema` validates the payload, and the router converts it to a `CapturedEvent` dataclass.
 2. `services.ingestion.enqueue_events` enforces `MAX_CAPTURE_BATCH_SIZE`, fills in `event_uuid` and `timestamp`, and calls `process_event_batch_task.delay(...)` with JSON-serializable dicts.
 3. `tasks.events.process_event_batch_task` builds `Event` objects and calls `bulk_create(ignore_conflicts=True)`. Duplicate `uuid`s are dropped by the DB unique constraint.
 4. Only `OperationalError` triggers a retry. Any other exception in the task loses the whole batch, and the API has already returned 200. **So validate everything in the schema (step 1), not in the task.** For example, the DB column limits (`max_length=255`) must also be enforced on the schema.
@@ -47,7 +48,7 @@ Task arguments must stay JSON-serializable (`CELERY_TASK_SERIALIZER = "json"`), 
 
 - Every list endpoint is bounded: clamp with `min(requested, settings.MAX_…)`.
 - Pagination on `/api/events` is a keyset cursor on `(timestamp, id)` descending. Keep `order_by("-timestamp", "-id")` and the tie-break filter together.
-- `Event.Meta.ordering` is set, so call `.order_by()` explicitly in aggregates.
+- `Event` has no default ordering, so every list query must call `.order_by(...)`. The `(-timestamp, -id)` index serves the pagination order.
 - `properties` is a JSONB field. If you filter on it, plan a GIN index in a migration.
 
 ## Settings and environment
@@ -56,6 +57,10 @@ Task arguments must stay JSON-serializable (`CELERY_TASK_SERIALIZER = "json"`), 
 - Tests use `config.settings.test` (configured in `pyproject.toml`): in-memory SQLite unless `TEST_DATABASE_URL` is set, LocMem cache, `CELERY_TASK_ALWAYS_EAGER=True`, effectively unlimited rate limits. By default tests need no Postgres or Redis.
 - Production refuses to start with the default or a short `SECRET_KEY`.
 - `base.py` reads `backend/.env` if present. Never commit `.env`.
+
+## Logging
+
+Log an event name as the message and put the data in `extra`, as the tasks do: `logger.info("processed_event_batch", extra={"inserted_count": n})`. The formatters in `config/logging.py` keep those fields: `key=value` with `LOG_FORMAT=text` (the default), or one JSON object per line with `LOG_FORMAT=json` (the production default). Celery uses the same config, because `config/celery.py` stops it from installing its own.
 
 ## Testing
 

@@ -1,5 +1,5 @@
 from .base import *  # noqa: F403
-from .base import env
+from .base import LOGGING, env
 
 DEBUG = env.bool("DEBUG", default=False)
 
@@ -24,3 +24,6 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+
+# JSON by default, for log collectors.
+LOGGING["handlers"]["console"]["formatter"] = env("LOG_FORMAT", default="json")

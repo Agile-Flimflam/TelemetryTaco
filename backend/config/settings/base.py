@@ -157,28 +157,23 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+# LOG_FORMAT is "text" (readable) or "json" (one object per line, for log collectors).
+# Both keep the fields passed with logger.info(..., extra={...}).
+LOG_FORMAT = env("LOG_FORMAT", default="text")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "structured": {
-            "format": (
-                "%(asctime)s %(levelname)s %(name)s "
-                "event=%(message)s task=%(task_name)s task_id=%(task_id)s"
-            ),
-        },
-        "default": {
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
-        },
+        "text": {"()": "config.logging.TextFormatter"},
+        "json": {"()": "config.logging.JsonFormatter"},
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "default",
+            "formatter": LOG_FORMAT,
         }
     },
-    "loggers": {
-        "events": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
-        "celery": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
-    },
+    # On the root logger so Celery's own loggers use it too (config/celery.py stops Celery
+    # from installing its handlers).
+    "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
 }
