@@ -23,15 +23,16 @@ class QueuedEvent:
     event_name: str
     properties: dict[str, Any]
     event_uuid: str
-    sent_at: str
+    timestamp: str
 
-    def as_dict(self) -> dict[str, Any]:
+    def as_dict(self, *, sent_at: str) -> dict[str, Any]:
         return {
             "distinct_id": self.distinct_id,
             "event_name": self.event_name,
             "properties": self.properties,
             "event_uuid": self.event_uuid,
-            "sent_at": self.sent_at,
+            "timestamp": self.timestamp,
+            "sent_at": sent_at,
         }
 
 
@@ -90,7 +91,11 @@ class TelemetryTaco:
         distinct_id: str,
         event_name: str,
         properties: dict[str, Any] | None = None,
+        *,
+        timestamp: datetime | None = None,
     ) -> None:
+        """Queue an event. ``timestamp`` defaults to now; a naive datetime is read as local time."""
+        event_time = (timestamp or datetime.now(UTC)).astimezone(UTC)
         with self._state_lock:
             if self._closed or self._closing:
                 raise RuntimeError("TelemetryTaco client is closed")
@@ -100,7 +105,7 @@ class TelemetryTaco:
                 event_name=event_name,
                 properties=properties or {},
                 event_uuid=str(uuid4()),
-                sent_at=datetime.now(UTC).isoformat(),
+                timestamp=event_time.isoformat(),
             )
             self._enqueue(payload)
 
@@ -244,15 +249,13 @@ class TelemetryTaco:
             for _ in batch:
                 self._queue.task_done()
 
-    def _send_batch(self, batch: list[QueuedEvent]) -> None:
-        payload = {"events": [event.as_dict() for event in batch]}
-        try:
-            body = json.dumps(payload).encode("utf-8")
-        except TypeError as exc:
-            logger.error("TelemetryTaco failed to serialize event batch: %s", exc, exc_info=True)
-            return
-
-        request = urllib.request.Request(
+    def _build_request(self, batch: list[QueuedEvent]) -> urllib.request.Request:
+        # sent_at is stamped per attempt, so the server's clock-skew correction also covers
+        # time spent queued and retrying.
+        sent_at = datetime.now(UTC).isoformat()
+        payload = {"events": [event.as_dict(sent_at=sent_at) for event in batch]}
+        body = json.dumps(payload).encode("utf-8")
+        return urllib.request.Request(
             self.batch_url,
             data=body,
             headers={
@@ -262,7 +265,16 @@ class TelemetryTaco:
             method="POST",
         )
 
+    def _send_batch(self, batch: list[QueuedEvent]) -> None:
         for attempt in range(self.max_retries + 1):
+            try:
+                request = self._build_request(batch)
+            except TypeError as exc:
+                logger.error(
+                    "TelemetryTaco failed to serialize event batch: %s", exc, exc_info=True
+                )
+                return
+
             try:
                 with urllib.request.urlopen(request, timeout=self.request_timeout) as response:
                     response.read()

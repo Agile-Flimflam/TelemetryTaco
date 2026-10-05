@@ -18,7 +18,7 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 
 ## How it works
 
-`capture()` creates a `QueuedEvent` with `event_uuid` (uuid4) and `sent_at` (UTC ISO) and puts it on a bounded `queue.Queue`. The daemon worker thread collects batches of up to `batch_size`. It flushes when the batch is full, when `flush_interval` has passed, or on `flush()` / `close()`, by POSTing `{"events": [...]}` to `/api/capture/batch`. A 4xx is dropped without retry. A 5xx or network error is retried `max_retries` times with linear backoff. `_STOP` is the shutdown sentinel, and the queue-full policies must never drop it.
+`capture()` creates a `QueuedEvent` with `event_uuid` (uuid4) and `timestamp` (UTC ISO, now unless the caller passes one), and puts it on a bounded `queue.Queue`. The daemon worker thread collects batches of up to `batch_size`. It flushes when the batch is full, when `flush_interval` has passed, or on `flush()` / `close()`, by POSTing `{"events": [...]}` to `/api/capture/batch`. A 4xx is dropped without retry. A 5xx or network error is retried `max_retries` times with linear backoff. Each attempt stamps a fresh `sent_at` so the server can correct for client clock skew. `_STOP` is the shutdown sentinel, and the queue-full policies must never drop it.
 
 ## Compatibility
 

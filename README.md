@@ -155,7 +155,7 @@ with TelemetryTaco(base_url="http://localhost:8000") as client:
     )
 ```
 
-The SDK batches events in a background worker, attaches `event_uuid` and `sent_at`, and flushes automatically when the context manager exits.
+The SDK batches events in a background worker, attaches `event_uuid`, `timestamp` and `sent_at`, and flushes automatically when the context manager exits. Pass `timestamp=` to `capture()` to record an event that happened earlier, such as a backfill.
 
 ## API Summary
 
@@ -169,9 +169,12 @@ The SDK batches events in a background worker, attaches `event_uuid` and `sent_a
     "path": "/"
   },
   "event_uuid": "optional-uuid",
+  "timestamp": "YYYY-MM-DDTHH:MM:SSZ",
   "sent_at": "YYYY-MM-DDTHH:MM:SSZ"
 }
 ```
+
+`timestamp` is when the event happened and `sent_at` is when the request left the client, both optional. With both, the server corrects for a wrong client clock by keeping the gap between them and anchoring it to the time it received the request. With only `timestamp`, it's stored as is. With only `sent_at`, it's used as the event time, as before `timestamp` existed. With neither, the server's receive time is used. An event time more than a minute in the future is replaced with the receive time.
 
 `distinct_id` and `event_name` must be 1 to 255 characters. `properties` may be at most `MAX_EVENT_PROPERTIES_BYTES` once serialized as JSON. No string may contain a NUL character. Anything else is rejected with HTTP 422, and in a batch one invalid event rejects the whole request, so nothing is accepted and then lost later.
 

@@ -260,6 +260,18 @@
             ],
             "title": "Event Uuid"
           },
+          "timestamp": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          },
           "sent_at": {
             "anyOf": [
               {

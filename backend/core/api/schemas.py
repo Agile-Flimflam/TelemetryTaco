@@ -28,6 +28,10 @@ class EventCaptureSchema(Schema):
     event_name: str = Field(min_length=1, max_length=EVENT_FIELD_MAX_LENGTH)
     properties: dict[str, Any] = Field(default_factory=dict)
     event_uuid: UUID | None = None
+    # When the event happened, by the client's clock.
+    timestamp: datetime | None = None
+    # When the request left the client. With timestamp, it corrects client clock skew. Without
+    # it, it's taken as the event time, which is how clients before timestamp existed used it.
     sent_at: datetime | None = None
 
     @field_validator("distinct_id", "event_name")

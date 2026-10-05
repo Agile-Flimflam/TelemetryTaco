@@ -147,6 +147,8 @@ export interface components {
             };
             /** Event Uuid */
             event_uuid?: string | null;
+            /** Timestamp */
+            timestamp?: string | null;
             /** Sent At */
             sent_at?: string | null;
         };

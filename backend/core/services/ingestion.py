@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -20,23 +20,45 @@ class NormalizedEvent:
     timestamp: datetime
 
 
-def _normalize_timestamp(timestamp: datetime | None) -> datetime:
-    if timestamp is None:
-        return timezone.now()
-
-    if timezone.is_naive(timestamp):
-        return timezone.make_aware(timestamp, timezone.get_current_timezone())
-
-    return timestamp
+# Clocks drift and requests take time, so allow a little slack before treating an event time as
+# bogus. Anything later is clamped to the receive time so it can't sit in future insight buckets.
+MAX_FUTURE_EVENT_SKEW = timedelta(minutes=1)
 
 
-def _normalize_event(event: EventCaptureSchema) -> NormalizedEvent:
+def _make_aware(value: datetime) -> datetime:
+    if timezone.is_naive(value):
+        return timezone.make_aware(value, timezone.get_current_timezone())
+    return value
+
+
+def _resolve_event_time(
+    *, timestamp: datetime | None, sent_at: datetime | None, received_at: datetime
+) -> datetime:
+    if timestamp is not None and sent_at is not None:
+        # The gap between timestamp and sent_at was measured on the client's clock, so it's
+        # reliable even when that clock is wrong. Anchor it to the server's receive time.
+        event_time = received_at - (_make_aware(sent_at) - _make_aware(timestamp))
+    elif timestamp is not None:
+        event_time = _make_aware(timestamp)
+    elif sent_at is not None:
+        event_time = _make_aware(sent_at)
+    else:
+        return received_at
+
+    if event_time > received_at + MAX_FUTURE_EVENT_SKEW:
+        return received_at
+    return event_time
+
+
+def _normalize_event(event: EventCaptureSchema, *, received_at: datetime) -> NormalizedEvent:
     return NormalizedEvent(
         distinct_id=event.distinct_id,
         event_name=event.event_name,
         properties=event.properties,
         event_uuid=event.event_uuid or uuid4(),
-        timestamp=_normalize_timestamp(event.sent_at),
+        timestamp=_resolve_event_time(
+            timestamp=event.timestamp, sent_at=event.sent_at, received_at=received_at
+        ),
     )
 
 
@@ -60,7 +82,8 @@ def enqueue_events(events: list[EventCaptureSchema]) -> int:
             f"batch size exceeds maximum of {settings.MAX_CAPTURE_BATCH_SIZE} events",
         )
 
-    normalized = [_normalize_event(event) for event in events]
+    received_at = timezone.now()
+    normalized = [_normalize_event(event, received_at=received_at) for event in events]
     process_event_batch_task.delay([_serialize_event(event) for event in normalized])
 
     return len(normalized)

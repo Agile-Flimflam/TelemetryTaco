@@ -39,6 +39,29 @@ def test_sdk_flushes_batched_events():
     assert len(payload["events"]) == 2
     assert all("event_uuid" in event for event in payload["events"])
     assert all("sent_at" in event for event in payload["events"])
+    assert all("timestamp" in event for event in payload["events"])
+
+
+def test_sdk_sends_capture_timestamp_and_stamps_sent_at_when_sending():
+    requests = []
+
+    def fake_urlopen(request, timeout):
+        requests.append(request)
+        return FakeResponse()
+
+    happened_at = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        client = TelemetryTaco(flush_interval=60, batch_size=10)
+        client.capture("user-1", "backfilled", timestamp=happened_at)
+        client.capture("user-1", "live")
+        client.flush(timeout=2)
+        client.close(timeout=2)
+
+    backfilled, live = json.loads(requests[0].data.decode("utf-8"))["events"]
+    assert datetime.fromisoformat(backfilled["timestamp"]) == happened_at
+    assert backfilled["sent_at"] == live["sent_at"]
+    assert datetime.fromisoformat(live["timestamp"]) <= datetime.fromisoformat(live["sent_at"])
+    assert datetime.fromisoformat(backfilled["sent_at"]) > happened_at
 
 
 def test_sdk_drop_oldest_policy_replaces_existing_item():
@@ -49,7 +72,7 @@ def test_sdk_drop_oldest_policy_replaces_existing_item():
             event_name="page_view",
             properties={},
             event_uuid="first",
-            sent_at="2026-01-01T00:00:00+0000",
+            timestamp="2026-01-01T00:00:00+0000",
         )
     )
 
@@ -59,7 +82,7 @@ def test_sdk_drop_oldest_policy_replaces_existing_item():
             event_name="signup_clicked",
             properties={},
             event_uuid="second",
-            sent_at="2026-01-01T00:00:01+0000",
+            timestamp="2026-01-01T00:00:01+0000",
         )
     )
 
@@ -80,7 +103,7 @@ def test_sdk_drop_oldest_policy_preserves_stop_sentinel():
             event_name="signup_clicked",
             properties={},
             event_uuid="second",
-            sent_at="2026-01-01T00:00:01+0000",
+            timestamp="2026-01-01T00:00:01+0000",
         )
     )
 

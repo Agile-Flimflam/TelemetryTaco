@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -187,6 +187,62 @@ def test_capture_rejects_nul_characters_in_properties(client):
 
     assert response.status_code == 422
     assert Event.objects.count() == 0
+
+
+RECEIVED_AT = datetime(2026, 10, 4, 12, 0, tzinfo=UTC)
+
+
+def _capture_at_receive_time(client, **fields):
+    with patch("core.services.ingestion.timezone.now", return_value=RECEIVED_AT):
+        response = client.post(
+            "/api/capture",
+            data={"distinct_id": "user-1", "event_name": "page_view", **fields},
+            content_type="application/json",
+        )
+    assert response.status_code == 200
+    return Event.objects.get().timestamp
+
+
+@pytest.mark.django_db
+def test_capture_without_times_uses_receive_time(client):
+    assert _capture_at_receive_time(client) == RECEIVED_AT
+
+
+@pytest.mark.django_db
+def test_capture_with_timestamp_only_stores_it(client):
+    happened_at = RECEIVED_AT - timedelta(hours=3)
+
+    assert _capture_at_receive_time(client, timestamp=happened_at.isoformat()) == happened_at
+
+
+@pytest.mark.django_db
+def test_capture_with_sent_at_only_keeps_legacy_behavior(client):
+    sent_at = RECEIVED_AT - timedelta(seconds=5)
+
+    assert _capture_at_receive_time(client, sent_at=sent_at.isoformat()) == sent_at
+
+
+@pytest.mark.django_db
+def test_capture_corrects_client_clock_skew_with_sent_at(client):
+    # The client's clock is 2 hours fast. The event happened 30 s before the request was sent.
+    client_now = RECEIVED_AT + timedelta(hours=2)
+    stored = _capture_at_receive_time(
+        client,
+        timestamp=(client_now - timedelta(seconds=30)).isoformat(),
+        sent_at=client_now.isoformat(),
+    )
+
+    assert stored == RECEIVED_AT - timedelta(seconds=30)
+
+
+@pytest.mark.django_db
+def test_capture_clamps_future_timestamps_to_receive_time(client):
+    in_a_day = RECEIVED_AT + timedelta(days=1)
+    within_slack = RECEIVED_AT + timedelta(seconds=30)
+
+    assert _capture_at_receive_time(client, timestamp=in_a_day.isoformat()) == RECEIVED_AT
+    Event.objects.all().delete()
+    assert _capture_at_receive_time(client, timestamp=within_slack.isoformat()) == within_slack
 
 
 @pytest.mark.django_db
