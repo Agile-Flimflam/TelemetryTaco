@@ -51,6 +51,11 @@ node_modules
 .backend.log
 .celery.log
 
+# Celery beat schedule state (shelve files, suffix varies by dbm backend)
+celerybeat-schedule
+celerybeat-schedule.*
+celerybeat.pid
+
 # Python packaging build output
 build/
 *.egg-info/
