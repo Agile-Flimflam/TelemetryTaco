@@ -1,3 +1,4 @@
+import atexit
 import json
 import logging
 import queue
@@ -23,15 +24,16 @@ class QueuedEvent:
     event_name: str
     properties: dict[str, Any]
     event_uuid: str
-    sent_at: str
+    timestamp: str
 
-    def as_dict(self) -> dict[str, Any]:
+    def as_dict(self, *, sent_at: str) -> dict[str, Any]:
         return {
             "distinct_id": self.distinct_id,
             "event_name": self.event_name,
             "properties": self.properties,
             "event_uuid": self.event_uuid,
-            "sent_at": self.sent_at,
+            "timestamp": self.timestamp,
+            "sent_at": sent_at,
         }
 
 
@@ -61,6 +63,7 @@ class TelemetryTaco:
         request_timeout: float = 5.0,
         max_retries: int = 2,
         queue_full_policy: QueueFullPolicy = "drop_newest",
+        exit_timeout: float = 5.0,
         _start_worker: bool = True,
     ):
         self.base_url = _normalize_base_url(base_url)
@@ -70,6 +73,7 @@ class TelemetryTaco:
         self.request_timeout = request_timeout
         self.max_retries = max_retries
         self.queue_full_policy = queue_full_policy
+        self.exit_timeout = exit_timeout
 
         self._queue: queue.Queue[QueuedEvent | object] = queue.Queue(maxsize=max_queue_size)
         self._state_lock = threading.Lock()
@@ -84,25 +88,39 @@ class TelemetryTaco:
                 daemon=True,
             )
             self._worker.start()
+            # The worker is a daemon thread so it can't keep the process alive, which means a
+            # script that never calls close() would exit with events still queued. Flush them at
+            # interpreter exit, bounded so a dead server can't hang the exit.
+            atexit.register(self._close_at_exit)
 
     def capture(
         self,
         distinct_id: str,
         event_name: str,
         properties: dict[str, Any] | None = None,
+        *,
+        timestamp: datetime | None = None,
     ) -> None:
+        """Queue an event. ``timestamp`` defaults to now; a naive datetime is read as local time."""
+        event_time = (timestamp or datetime.now(UTC)).astimezone(UTC)
+        payload = QueuedEvent(
+            distinct_id=distinct_id,
+            event_name=event_name,
+            properties=properties or {},
+            event_uuid=str(uuid4()),
+            timestamp=event_time.isoformat(),
+        )
         with self._state_lock:
             if self._closed or self._closing:
                 raise RuntimeError("TelemetryTaco client is closed")
 
-            payload = QueuedEvent(
-                distinct_id=distinct_id,
-                event_name=event_name,
-                properties=properties or {},
-                event_uuid=str(uuid4()),
-                sent_at=datetime.now(UTC).isoformat(),
-            )
-            self._enqueue(payload)
+            if self.queue_full_policy != "block":
+                self._enqueue(payload)
+                return
+
+        # Blocking happens outside the lock, so a full queue can't stall close() or other
+        # threads' capture() calls while this one waits for room.
+        self._enqueue(payload)
 
     def flush(self, timeout: float | None = None) -> None:
         deadline = None if timeout in (None, 0) else time.monotonic() + timeout
@@ -136,6 +154,17 @@ class TelemetryTaco:
         with self._state_lock:
             self._closed = True
             self._closing = False
+        atexit.unregister(self._close_at_exit)
+
+    def _close_at_exit(self) -> None:
+        try:
+            self.close(timeout=self.exit_timeout)
+        except Exception:
+            logger.warning(
+                "TelemetryTaco could not flush %s queued event(s) before exit.",
+                self._queue.unfinished_tasks,
+                exc_info=True,
+            )
 
     def __enter__(self) -> "TelemetryTaco":
         return self
@@ -145,7 +174,13 @@ class TelemetryTaco:
 
     def _enqueue(self, payload: QueuedEvent) -> None:
         if self.queue_full_policy == "block":
-            self._queue.put(payload, timeout=self.request_timeout)
+            try:
+                self._queue.put(payload, timeout=self.request_timeout)
+            except queue.Full:
+                logger.warning(
+                    "TelemetryTaco queue still full after %ss; dropped newest event.",
+                    self.request_timeout,
+                )
             return
 
         try:
@@ -244,15 +279,13 @@ class TelemetryTaco:
             for _ in batch:
                 self._queue.task_done()
 
-    def _send_batch(self, batch: list[QueuedEvent]) -> None:
-        payload = {"events": [event.as_dict() for event in batch]}
-        try:
-            body = json.dumps(payload).encode("utf-8")
-        except TypeError as exc:
-            logger.error("TelemetryTaco failed to serialize event batch: %s", exc, exc_info=True)
-            return
-
-        request = urllib.request.Request(
+    def _build_request(self, batch: list[QueuedEvent]) -> urllib.request.Request:
+        # sent_at is stamped per attempt, so the server's clock-skew correction also covers
+        # time spent queued and retrying.
+        sent_at = datetime.now(UTC).isoformat()
+        payload = {"events": [event.as_dict(sent_at=sent_at) for event in batch]}
+        body = json.dumps(payload).encode("utf-8")
+        return urllib.request.Request(
             self.batch_url,
             data=body,
             headers={
@@ -262,7 +295,16 @@ class TelemetryTaco:
             method="POST",
         )
 
+    def _send_batch(self, batch: list[QueuedEvent]) -> None:
         for attempt in range(self.max_retries + 1):
+            try:
+                request = self._build_request(batch)
+            except TypeError as exc:
+                logger.error(
+                    "TelemetryTaco failed to serialize event batch: %s", exc, exc_info=True
+                )
+                return
+
             try:
                 with urllib.request.urlopen(request, timeout=self.request_timeout) as response:
                     response.read()

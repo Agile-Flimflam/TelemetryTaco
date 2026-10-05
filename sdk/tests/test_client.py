@@ -1,6 +1,14 @@
 import json
+import subprocess
+import sys
+import textwrap
+import threading
+import time
 import urllib.request
 from datetime import UTC, datetime
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 from telemetry_taco import TelemetryTaco
@@ -39,6 +47,29 @@ def test_sdk_flushes_batched_events():
     assert len(payload["events"]) == 2
     assert all("event_uuid" in event for event in payload["events"])
     assert all("sent_at" in event for event in payload["events"])
+    assert all("timestamp" in event for event in payload["events"])
+
+
+def test_sdk_sends_capture_timestamp_and_stamps_sent_at_when_sending():
+    requests = []
+
+    def fake_urlopen(request, timeout):
+        requests.append(request)
+        return FakeResponse()
+
+    happened_at = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        client = TelemetryTaco(flush_interval=60, batch_size=10)
+        client.capture("user-1", "backfilled", timestamp=happened_at)
+        client.capture("user-1", "live")
+        client.flush(timeout=2)
+        client.close(timeout=2)
+
+    backfilled, live = json.loads(requests[0].data.decode("utf-8"))["events"]
+    assert datetime.fromisoformat(backfilled["timestamp"]) == happened_at
+    assert backfilled["sent_at"] == live["sent_at"]
+    assert datetime.fromisoformat(live["timestamp"]) <= datetime.fromisoformat(live["sent_at"])
+    assert datetime.fromisoformat(backfilled["sent_at"]) > happened_at
 
 
 def test_sdk_drop_oldest_policy_replaces_existing_item():
@@ -49,7 +80,7 @@ def test_sdk_drop_oldest_policy_replaces_existing_item():
             event_name="page_view",
             properties={},
             event_uuid="first",
-            sent_at="2026-01-01T00:00:00+0000",
+            timestamp="2026-01-01T00:00:00+0000",
         )
     )
 
@@ -59,7 +90,7 @@ def test_sdk_drop_oldest_policy_replaces_existing_item():
             event_name="signup_clicked",
             properties={},
             event_uuid="second",
-            sent_at="2026-01-01T00:00:01+0000",
+            timestamp="2026-01-01T00:00:01+0000",
         )
     )
 
@@ -80,7 +111,7 @@ def test_sdk_drop_oldest_policy_preserves_stop_sentinel():
             event_name="signup_clicked",
             properties={},
             event_uuid="second",
-            sent_at="2026-01-01T00:00:01+0000",
+            timestamp="2026-01-01T00:00:01+0000",
         )
     )
 
@@ -161,3 +192,83 @@ def test_sdk_drops_failed_request_batch_without_killing_worker():
     assert len(requests) == 1
     payload = json.loads(requests[0][0].data.decode("utf-8"))
     assert payload["events"][0]["distinct_id"] == "user-2"
+
+
+def test_sdk_block_policy_drops_instead_of_raising_when_queue_stays_full(caplog):
+    client = TelemetryTaco(
+        max_queue_size=1,
+        queue_full_policy="block",
+        request_timeout=0.05,
+        _start_worker=False,
+    )
+    client.capture("user-1", "first")
+
+    with caplog.at_level("WARNING", logger="telemetry_taco"):
+        client.capture("user-1", "second")
+
+    assert client._queue.qsize() == 1  # type: ignore[attr-defined]
+    assert "dropped newest event" in caplog.text
+
+
+def test_sdk_block_policy_waits_without_holding_the_state_lock():
+    client = TelemetryTaco(
+        max_queue_size=1,
+        queue_full_policy="block",
+        request_timeout=1.0,
+        _start_worker=False,
+    )
+    client.capture("user-1", "first")
+    blocked = threading.Thread(target=client.capture, args=("user-1", "second"))
+    blocked.start()
+    time.sleep(0.1)
+
+    lock_acquired = client._state_lock.acquire(timeout=0.2)  # type: ignore[attr-defined]
+    if lock_acquired:
+        client._state_lock.release()  # type: ignore[attr-defined]
+    blocked.join(timeout=2)
+
+    assert lock_acquired
+
+
+class _RecordingHandler(BaseHTTPRequestHandler):
+    received: list[dict[str, Any]] = []
+
+    def do_POST(self) -> None:
+        body = self.rfile.read(int(self.headers["Content-Length"]))
+        self.received.extend(json.loads(body)["events"])
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"{}")
+
+    def log_message(self, *args: Any) -> None:
+        return None
+
+
+def test_sdk_delivers_queued_events_when_a_script_exits_without_close():
+    _RecordingHandler.received = []
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _RecordingHandler)
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    script = textwrap.dedent(
+        f"""
+        from telemetry_taco import TelemetryTaco
+
+        client = TelemetryTaco("http://127.0.0.1:{server.server_port}", flush_interval=60)
+        client.capture("user-1", "script_finished")
+        """
+    )
+
+    try:
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, "-c", script],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True,
+            timeout=20,
+            check=False,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert result.returncode == 0, result.stderr.decode()
+    assert [event["event_name"] for event in _RecordingHandler.received] == ["script_finished"]

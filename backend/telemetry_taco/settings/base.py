@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -127,15 +128,33 @@ CACHES = {
 }
 
 RATELIMIT_USE_CACHE = "default"
+RATELIMIT_IP_META_KEY = "core.api.ratelimit.client_ip"
+# Number of reverse proxies in front of the app. 0 keys rate limits on REMOTE_ADDR and ignores
+# X-Forwarded-For, which a client can forge. Only raise it when every request passes through
+# that many proxies, each appending to X-Forwarded-For.
+TRUSTED_PROXY_COUNT = env.int("TRUSTED_PROXY_COUNT", default=0)
 
+# Rates are per client IP. The dashboard polls /api/events, /api/insights and /api/stats, and
+# frontend/src/shared/api/polling.test.ts fails if its intervals use more than half of these.
 RATE_LIMIT_CAPTURE_EVENT = env("RATE_LIMIT_CAPTURE_EVENT", default="1000/h")
 RATE_LIMIT_LIST_EVENTS = env("RATE_LIMIT_LIST_EVENTS", default="10000/h")
-RATE_LIMIT_GET_INSIGHTS = env("RATE_LIMIT_GET_INSIGHTS", default="300/h")
+RATE_LIMIT_GET_INSIGHTS = env("RATE_LIMIT_GET_INSIGHTS", default="1000/h")
 
 MAX_CAPTURE_BATCH_SIZE = env.int("MAX_CAPTURE_BATCH_SIZE", default=500)
+MAX_EVENT_PROPERTIES_BYTES = env.int("MAX_EVENT_PROPERTIES_BYTES", default=32 * 1024)
 MAX_EVENTS_LIMIT = env.int("MAX_EVENTS_LIMIT", default=200)
 MAX_INSIGHTS_LOOKBACK_MINUTES = env.int("MAX_INSIGHTS_LOOKBACK_MINUTES", default=24 * 60)
 EVENT_RETENTION_DAYS = env.int("EVENT_RETENTION_DAYS", default=30)
+EVENT_RETENTION_DELETE_BATCH_SIZE = env.int("EVENT_RETENTION_DELETE_BATCH_SIZE", default=10_000)
+
+# Needs a beat process: `celery -A core beat` (its own service in docker-compose.yml), or
+# `celery -A core worker -B` for a single development worker. Hourly keeps each purge small.
+CELERY_BEAT_SCHEDULE = {
+    "purge-expired-events": {
+        "task": "core.tasks.events.purge_expired_events_task",
+        "schedule": crontab(minute=17),
+    },
+}
 
 LOGGING = {
     "version": 1,

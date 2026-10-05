@@ -9,16 +9,16 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 - **What the public API can raise today:**
   - `ValueError` from the constructor for an invalid `base_url`.
   - `RuntimeError` from `capture()` after `close()`.
-  - `queue.Full` from `capture()` when `queue_full_policy="block"` and the queue is still full after `request_timeout`. This is a known issue (#17); the intended behavior is to log and drop.
   - `TimeoutError` from `flush(timeout=...)` / `close(timeout=...)` when events are still unsent at the deadline.
 
   Don't add new exceptions to this list. If you change one of them, update this section and the README.
-- **Never block the caller** unless the user chose `queue_full_policy="block"`. `capture()` only enqueues.
+- **Never block the caller** unless the user chose `queue_full_policy="block"`. `capture()` only enqueues. Under `"block"`, it waits up to `request_timeout` for room *without* holding `_state_lock`, then logs and drops the event.
+- **Queued events survive a normal interpreter exit.** The worker is a daemon thread, so `__init__` registers an `atexit` hook that calls `close(timeout=exit_timeout)` and logs instead of raising; `close()` unregisters it. Covered by a subprocess test.
 - **The background worker must survive any failure.** One bad batch must not stop later batches (see `test_sdk_drops_failed_request_batch_without_killing_worker`).
 
 ## How it works
 
-`capture()` creates a `QueuedEvent` with `event_uuid` (uuid4) and `sent_at` (UTC ISO) and puts it on a bounded `queue.Queue`. The daemon worker thread collects batches of up to `batch_size`. It flushes when the batch is full, when `flush_interval` has passed, or on `flush()` / `close()`, by POSTing `{"events": [...]}` to `/api/capture/batch`. A 4xx is dropped without retry. A 5xx or network error is retried `max_retries` times with linear backoff. `_STOP` is the shutdown sentinel, and the queue-full policies must never drop it.
+`capture()` creates a `QueuedEvent` with `event_uuid` (uuid4) and `timestamp` (UTC ISO, now unless the caller passes one), and puts it on a bounded `queue.Queue`. The daemon worker thread collects batches of up to `batch_size`. It flushes when the batch is full, when `flush_interval` has passed, or on `flush()` / `close()`, by POSTing `{"events": [...]}` to `/api/capture/batch`. A 4xx is dropped without retry. A 5xx or network error is retried `max_retries` times with linear backoff. Each attempt stamps a fresh `sent_at` so the server can correct for client clock skew. `_STOP` is the shutdown sentinel, and the queue-full policies must never drop it.
 
 ## Compatibility
 

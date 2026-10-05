@@ -26,10 +26,28 @@ def test_process_event_batch_task_ignores_duplicate_event_uuids():
         },
     ]
 
-    processed_count = process_event_batch_task.run(payload)
+    inserted_count = process_event_batch_task.run(payload)
 
-    assert processed_count == 2
+    assert inserted_count == 1
     assert Event.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_process_event_batch_task_counts_only_newly_inserted_events():
+    existing_uuid = str(uuid4())
+    Event.objects.create(distinct_id="user-1", event_name="page_view", uuid=existing_uuid)
+    payload = [
+        {"distinct_id": "user-1", "event_name": "page_view", "event_uuid": existing_uuid},
+        {"distinct_id": "user-2", "event_name": "page_view", "event_uuid": str(uuid4())},
+    ]
+
+    first_run = process_event_batch_task.run(payload)
+    # A Celery retry delivers the same batch again.
+    retried_run = process_event_batch_task.run(payload)
+
+    assert first_run == 1
+    assert retried_run == 0
+    assert Event.objects.count() == 2
 
 
 @pytest.mark.django_db

@@ -29,7 +29,7 @@ export function InsightChartCard({ lookbackMinutes }: InsightChartCardProps) {
             title="Loading insight series"
             description="Running the initial aggregation query."
           />
-        ) : data.length === 0 ? (
+        ) : data.every((point) => point.count === 0) ? (
           <PanelMessage
             title="No data available"
             description="Once events are captured, they will aggregate here by minute."

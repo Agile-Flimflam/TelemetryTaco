@@ -126,7 +126,7 @@ cd ..
 # Start Celery worker in background
 echo -e "${GREEN}▶️  Starting Celery worker...${NC}"
 cd backend
-POETRY_CACHE_DIR="${POETRY_CACHE_DIR}" poetry run celery -A core worker --loglevel=info > "${CELERY_LOG_FILE}" 2>&1 &
+POETRY_CACHE_DIR="${POETRY_CACHE_DIR}" poetry run celery -A core worker -B --loglevel=info > "${CELERY_LOG_FILE}" 2>&1 &
 CELERY_PID=$!
 echo $CELERY_PID > "${CELERY_PID_FILE}"
 cd ..

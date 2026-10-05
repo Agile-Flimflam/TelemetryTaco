@@ -232,10 +232,14 @@
       "EventCaptureSchema": {
         "properties": {
           "distinct_id": {
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Distinct Id",
             "type": "string"
           },
           "event_name": {
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Event Name",
             "type": "string"
           },
@@ -255,6 +259,18 @@
               }
             ],
             "title": "Event Uuid"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
           },
           "sent_at": {
             "anyOf": [
@@ -358,7 +374,14 @@
       },
       "InsightDataPoint": {
         "properties": {
+          "bucket": {
+            "description": "Start of the minute, in UTC.",
+            "format": "date-time",
+            "title": "Bucket",
+            "type": "string"
+          },
           "time": {
+            "description": "Deprecated: the bucket as HH:MM in UTC. Format bucket on the client instead.",
             "title": "Time",
             "type": "string"
           },
@@ -368,6 +391,7 @@
           }
         },
         "required": [
+          "bucket",
           "time",
           "count"
         ],

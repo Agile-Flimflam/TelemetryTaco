@@ -147,6 +147,8 @@ export interface components {
             };
             /** Event Uuid */
             event_uuid?: string | null;
+            /** Timestamp */
+            timestamp?: string | null;
             /** Sent At */
             sent_at?: string | null;
         };
@@ -192,7 +194,16 @@ export interface components {
         };
         /** InsightDataPoint */
         InsightDataPoint: {
-            /** Time */
+            /**
+             * Bucket
+             * Format: date-time
+             * @description Start of the minute, in UTC.
+             */
+            bucket: string;
+            /**
+             * Time
+             * @description Deprecated: the bucket as HH:MM in UTC. Format bucket on the client instead.
+             */
             time: string;
             /** Count */
             count: number;

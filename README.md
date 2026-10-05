@@ -105,11 +105,16 @@ Important environment variables:
 - `REDIS_URL`
 - `CACHE_URL`
 - `MAX_CAPTURE_BATCH_SIZE`
+- `MAX_EVENT_PROPERTIES_BYTES` (default 32768)
 - `MAX_EVENTS_LIMIT`
 - `MAX_INSIGHTS_LOOKBACK_MINUTES`
 - `EVENT_RETENTION_DAYS`
+- `RATE_LIMIT_CAPTURE_EVENT`, `RATE_LIMIT_LIST_EVENTS`, `RATE_LIMIT_GET_INSIGHTS` (per client IP, for example `1000/h`)
+- `TRUSTED_PROXY_COUNT`
 
-Retention cleanup is exposed as a management command:
+Rate limits are per client IP. Behind a reverse proxy or load balancer, every request arrives from the proxy's address, so all clients would share one limit. Set `TRUSTED_PROXY_COUNT` to the number of proxies in front of the backend (usually 1) and the client IP is read from `X-Forwarded-For` instead. Leave it at 0 when clients can reach the backend directly, since they could forge that header.
+
+Events older than `EVENT_RETENTION_DAYS` (0 disables it) are purged every hour by Celery beat, in chunks of `EVENT_RETENTION_DELETE_BATCH_SIZE` rows. Docker Compose runs beat as its own `beat` service, and the development worker (`pnpm dev:worker`, `make dev`, `./start.sh`) runs it embedded with `-B`. In production, run exactly one `celery -A core beat` process. You can also purge by hand:
 
 ```bash
 cd backend
@@ -150,7 +155,7 @@ with TelemetryTaco(base_url="http://localhost:8000") as client:
     )
 ```
 
-The SDK batches events in a background worker, attaches `event_uuid` and `sent_at`, and flushes automatically when the context manager exits.
+The SDK batches events in a background worker, attaches `event_uuid`, `timestamp` and `sent_at`, and flushes automatically when the context manager exits. Pass `timestamp=` to `capture()` to record an event that happened earlier, such as a backfill. If a script exits without closing the client, queued events are still sent at exit, waiting at most `exit_timeout` seconds (default 5).
 
 ## API Summary
 
@@ -164,9 +169,14 @@ The SDK batches events in a background worker, attaches `event_uuid` and `sent_a
     "path": "/"
   },
   "event_uuid": "optional-uuid",
+  "timestamp": "YYYY-MM-DDTHH:MM:SSZ",
   "sent_at": "YYYY-MM-DDTHH:MM:SSZ"
 }
 ```
+
+`timestamp` is when the event happened and `sent_at` is when the request left the client, both optional. With both, the server corrects for a wrong client clock by keeping the gap between them and anchoring it to the time it received the request. With only `timestamp`, it's stored as is. With only `sent_at`, it's used as the event time, as before `timestamp` existed. With neither, the server's receive time is used. An event time more than a minute in the future is replaced with the receive time.
+
+`distinct_id` and `event_name` must be 1 to 255 characters. `properties` may be at most `MAX_EVENT_PROPERTIES_BYTES` once serialized as JSON. No string may contain a NUL character. Anything else is rejected with HTTP 422, and in a batch one invalid event rejects the whole request, so nothing is accepted and then lost later.
 
 Response:
 
@@ -189,6 +199,8 @@ Response:
 }
 ```
 
+The response's `accepted` is the number of distinct `event_uuid`s in the request. An event whose `event_uuid` was already stored is accepted but not stored again.
+
 ### `GET /api/events?limit=100&before=YYYY-MM-DDTHH:MM:SSZ,EVENT_ID`
 
 Returns recent events ordered by `timestamp desc, id desc`.
@@ -197,13 +209,15 @@ Plain ISO 8601 timestamps are still accepted for backward compatibility.
 
 ### `GET /api/insights?lookback_minutes=60`
 
-Returns minute buckets shaped like:
+Returns one point per minute for the last `lookback_minutes` minutes, oldest first, ending with the current minute. Minutes without events have a count of 0, so the series always has `lookback_minutes` points (capped at `MAX_INSIGHTS_LOOKBACK_MINUTES`).
 
 ```json
 [
-  { "time": "18:04", "count": 4 }
+  { "bucket": "2026-10-04T18:04:00Z", "time": "18:04", "count": 4 }
 ]
 ```
+
+`bucket` is the start of the minute in UTC; format it in the viewer's time zone. `time` is the same minute as `HH:MM` in UTC and is deprecated, kept for older clients.
 
 ### `GET /api/stats`
 
