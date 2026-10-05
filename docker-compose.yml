@@ -1,9 +1,12 @@
-# Shared by backend and worker so their settings can't drift apart.
-# Django settings only read these three URLs.
+# `docker compose up` runs the whole stack for local use: http://localhost:5173.
+# Shared by backend, worker and beat so their settings can't drift apart. These win over
+# backend/.env, which the ./backend mount also brings in.
 x-backend-env: &backend-env
   DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-telemetry_taco}
   REDIS_URL: redis://redis:6379/0
   CACHE_URL: redis://redis:6379/1
+  # The frontend's dev server proxies /api with Host: backend:8000.
+  ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,backend
 
 services:
   db:
@@ -51,7 +54,21 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: python manage.py runserver 0.0.0.0:8000
+    # Seeds demo events on first boot only, so restarts keep whatever you've captured.
+    command: >
+      sh -c "python manage.py migrate --noinput --fake-initial
+      && python manage.py seed_events --if-empty
+      && exec python manage.py runserver 0.0.0.0:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/live')"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   worker:
     build:
@@ -61,8 +78,9 @@ services:
     environment: *backend-env
     volumes:
       - ./backend:/app
+    # Waits for the backend so migrations have run before it writes events.
     depends_on:
-      db:
+      backend:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -83,6 +101,33 @@ services:
         condition: service_healthy
     command: celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule
 
+  frontend:
+    image: node:24-slim
+    container_name: telemetry-taco-frontend
+    working_dir: /app
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+      # Outside /app, or pnpm creates its store inside your checkout.
+      npm_config_store_dir: /pnpm-store
+    ports:
+      - "5173:5173"
+    # The repo root holds the pnpm workspace and lockfile. The anonymous volumes keep the
+    # container's Linux node_modules apart from the host's.
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/frontend/node_modules
+      - pnpm_store:/pnpm-store
+    depends_on:
+      backend:
+        condition: service_healthy
+    # pnpm 10 matches CI.
+    command: >
+      sh -c "npm install --global pnpm@10
+      && CI=true pnpm install --frozen-lockfile
+      && exec pnpm --dir frontend dev"
+
 volumes:
   postgres_data:
   redis_data:
+  pnpm_store:

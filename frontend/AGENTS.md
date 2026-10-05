@@ -35,7 +35,7 @@ frontend/src/
 `openapi.json` and `src/shared/api/generated.ts` are produced from the backend:
 
 ```bash
-pnpm generate:api-types   # from the repo root: exports schema, then runs openapi-typescript
+make types   # from the repo root: exports schema, then runs openapi-typescript
 ```
 
 CI regenerates both files and fails on any diff. If the backend changed, regenerate and commit both files in the same PR.
@@ -73,7 +73,7 @@ pnpm lint && pnpm type-check && pnpm test && pnpm build
 
 ## Dev server
 
-`pnpm dev` serves on :5173 and proxies `/api` to `http://localhost:8000`. Set `VITE_API_URL` only when the API is on another origin.
+`pnpm dev` serves on :5173 and proxies `/api` to `http://localhost:8000`, or to `API_PROXY_TARGET` when set (`docker compose` sets it to `http://backend:8000`). `make dev` starts it alongside the backend. Set `VITE_API_URL` only when the API is on another origin.
 
 ## Environment variables
 
@@ -82,3 +82,5 @@ Vite reads `VITE_*` variables from `frontend/.env`, `frontend/.env.local` and `f
 | Variable | Default | Purpose |
 |---|---|---|
 | `VITE_API_URL` | empty (same origin, via the dev proxy) | Base URL of the backend API when it's served from a different origin |
+
+`API_PROXY_TARGET` (default `http://localhost:8000`) sets where the dev server proxies `/api`. It isn't a `VITE_*` variable: `vite.config.ts` reads it from the shell environment, not from `.env` files, and it never reaches the bundle.

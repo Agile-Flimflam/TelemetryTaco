@@ -44,10 +44,12 @@ POETRY_CACHE_DIR=/tmp/pypoetry-cache poetry install
 
 ## Run
 
+From the repo root, `make dev` does everything in this section: it starts Postgres and Redis in Docker, migrates, and runs the API, worker, beat and frontend from `Procfile.dev`. Ctrl-C stops them all. The steps below are the same thing by hand.
+
 Start dependencies from the repo root:
 
 ```bash
-docker-compose up -d db redis
+docker compose up -d db redis
 ```
 
 Run migrations:
@@ -56,7 +58,7 @@ Run migrations:
 poetry run python manage.py migrate
 ```
 
-A database created before the Django app was renamed from `core` to `events` already has the `core_event` table, so plain `migrate` fails with `relation "core_event" already exists`. Run `poetry run python manage.py migrate --fake-initial` once instead. `pnpm migrate`, `make migrate` and `./start.sh` already pass `--fake-initial`.
+A database created before the Django app was renamed from `core` to `events` already has the `core_event` table, so plain `migrate` fails with `relation "core_event" already exists`. Run `poetry run python manage.py migrate --fake-initial` once instead. `make migrate`, `make dev` and `docker compose up` already pass `--fake-initial`.
 
 Start the API server:
 
@@ -64,10 +66,11 @@ Start the API server:
 poetry run python manage.py runserver
 ```
 
-Start the worker in another shell:
+Start the worker and the beat scheduler in two more shells:
 
 ```bash
-poetry run celery -A config worker -B --loglevel=info
+poetry run celery -A config worker --loglevel=info
+poetry run celery -A config beat --loglevel=info
 ```
 
 ## Validation
@@ -91,6 +94,14 @@ Seed sample data:
 
 ```bash
 poetry run python manage.py seed_events --count 2000
+```
+
+`--clean` deletes existing events first. `--if-empty` does nothing when events already exist, which is how `docker compose up` seeds only on first boot.
+
+Reset rate-limit counters after changing a `RATE_LIMIT_*` setting (they live in the Redis cache, database 1):
+
+```bash
+docker compose exec redis redis-cli -n 1 FLUSHDB
 ```
 
 Purge expired events:

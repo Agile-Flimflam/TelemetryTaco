@@ -1,82 +1,86 @@
-.PHONY: help start stop dev services migrate test clean validate
+.DEFAULT_GOAL := help
 
-help: ## Show this help message
-	@echo "TelemetryTaco Development Commands"
-	@echo ""
-	@echo "Usage: make [target]"
-	@echo ""
-	@echo "Targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
+BACKEND := cd backend && poetry run
+FRONTEND := pnpm --dir frontend
+COMPOSE := docker compose
 
-services: ## Start Docker services (PostgreSQL & Redis)
-	@echo "🌮 Starting Docker services..."
-	docker-compose up -d db redis
-	@echo "⏳ Waiting for PostgreSQL..."
-	@timeout=30; \
-	counter=0; \
-	until docker-compose exec -T db pg_isready -U postgres > /dev/null 2>&1; do \
-		sleep 1; \
-		counter=$$((counter + 1)); \
-		if [ $$counter -ge $$timeout ]; then \
-			echo "❌ PostgreSQL failed to start"; \
-			exit 1; \
-		fi; \
-	done
-	@echo "✅ Services ready"
+.PHONY: help setup services down migrate dev docker seed types \
+	lint lint-backend lint-frontend fmt check \
+	test test-backend test-frontend test-sdk build \
+	validate validate-backend validate-frontend
 
-install: ## Install all dependencies
-	@echo "📦 Installing dependencies..."
+help: ## Show this help
+	@awk 'BEGIN {FS = ":.*## "} /^## / {printf "\n%s\n", substr($$0, 4)} /^[a-zA-Z_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+## Running
+
+setup: ## Install backend and frontend dependencies
 	cd backend && poetry install
-	cd frontend && pnpm install
-	@echo "✅ Dependencies installed"
+	pnpm install
+
+services: ## Start Postgres and Redis in Docker
+	$(COMPOSE) up -d --wait db redis
+
+down: ## Stop every Docker service (data volumes are kept)
+	$(COMPOSE) down
 
 # --fake-initial adopts the core_event table in databases from before the core -> events rename.
-migrate: install ## Run database migrations (installs dependencies first)
-	@echo "🔄 Running migrations..."
-	cd backend && poetry run python manage.py migrate --fake-initial
+migrate: ## Apply database migrations
+	$(BACKEND) python manage.py migrate --fake-initial
 
-dev: services install migrate ## Start all development servers (backend, worker, frontend)
-	@echo "🚀 Starting development servers..."
-	@echo "📝 Backend: http://localhost:8000"
-	@echo "📝 Frontend: http://localhost:5173"
-	@echo ""
-	@echo "Starting in background..."
-	@cd backend && poetry run python manage.py runserver > ../.backend.log 2>&1 & echo $$! > ../.backend.pid
-	@cd backend && poetry run celery -A config worker -B --loglevel=info > ../.celery.log 2>&1 & echo $$! > ../.celery.pid
-	@echo "✅ Backend and Celery started in background"
-	@echo "▶️  Starting frontend (foreground)..."
-	@cd frontend && pnpm dev
+# honcho exports ./.env to every process by default, which would override backend/.env (the file
+# the settings read) with Docker-only hostnames from a root .env. --env /dev/null turns that off.
+dev: services migrate ## Run the API, worker, beat and frontend locally; Ctrl-C stops them all
+	poetry --project backend run honcho --env /dev/null --procfile Procfile.dev start
 
-start: dev ## Alias for 'dev'
+docker: ## Run the whole stack in Docker, seeded with demo data
+	$(COMPOSE) up --build
 
-stop: ## Stop all development servers
-	@echo "🛑 Stopping services..."
-	@if [ -f .backend.pid ]; then \
-		kill $$(cat .backend.pid) 2>/dev/null || true; \
-		rm .backend.pid; \
-		echo "✅ Stopped backend"; \
-	fi
-	@if [ -f .celery.pid ]; then \
-		kill $$(cat .celery.pid) 2>/dev/null || true; \
-		rm .celery.pid; \
-		echo "✅ Stopped Celery"; \
-	fi
-	@echo "✅ All services stopped"
+seed: ## Add demo events; pass options with ARGS="--clean --count 5000"
+	$(BACKEND) python manage.py seed_events $(ARGS)
 
-clean: stop ## Stop services and clean up logs
-	@rm -f .backend.log .celery.log
-	@echo "✅ Cleaned up"
+## Checks
 
-test: ## Run tests
-	@pnpm test
+types: ## Export the OpenAPI schema and regenerate the frontend API types
+	cd backend && DJANGO_SETTINGS_MODULE=config.settings.test poetry run python manage.py export_openapi_schema ../frontend/openapi.json
+	$(FRONTEND) generate:api-types
 
-validate: ## Run backend, frontend, and SDK validation
-	@pnpm validate:all
+lint: lint-backend lint-frontend ## Lint and type-check everything
 
-seed: ## Seed database with historical event data
-	@echo "📊 Seeding database..."
-	cd backend && poetry run python manage.py seed_events
+lint-backend: ## Ruff, Ruff format check and Bandit
+	$(BACKEND) ruff check .
+	$(BACKEND) ruff format --check .
+	$(BACKEND) bandit -q -r . -c bandit.yaml
 
-seed-clean: ## Clean and seed database (deletes existing events first)
-	@echo "📊 Cleaning and seeding database..."
-	cd backend && poetry run python manage.py seed_events --clean
+lint-frontend: ## ESLint and tsc
+	$(FRONTEND) lint
+	$(FRONTEND) type-check
+
+fmt: ## Fix lint issues and format the backend
+	$(BACKEND) ruff check --fix .
+	$(BACKEND) ruff format .
+	$(FRONTEND) lint --fix
+
+check: ## Django system check
+	cd backend && DJANGO_SETTINGS_MODULE=config.settings.test poetry run python manage.py check
+
+test: test-backend test-frontend test-sdk ## Run every test suite
+
+test-backend: ## Backend tests (SQLite unless TEST_DATABASE_URL is set)
+	$(BACKEND) pytest
+
+test-frontend: ## Frontend tests
+	$(FRONTEND) test
+
+# The SDK has no dependencies of its own, so it borrows pytest from the backend's venv.
+test-sdk: ## SDK tests
+	cd sdk && "$$(cd ../backend && poetry run python -c 'import sys; print(sys.executable)')" -m pytest tests
+
+build: ## Build the frontend
+	$(FRONTEND) build
+
+validate: validate-backend validate-frontend test-sdk ## Run what CI runs that needs no Docker
+
+validate-backend: lint-backend check test-backend ## Validate the backend
+
+validate-frontend: types lint-frontend test-frontend build ## Validate the frontend

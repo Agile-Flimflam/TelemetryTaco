@@ -92,4 +92,4 @@ poetry run bandit -r . -c bandit.yaml       # CI runs this too
 poetry run python manage.py check_db        # optional: is the dev database reachable?
 ```
 
-If you changed an endpoint or schema, regenerate frontend types from the repo root with `pnpm generate:api-types`.
+If you changed an endpoint or schema, regenerate frontend types from the repo root with `make types`. `make validate-backend` runs all of the above except `check_db`.

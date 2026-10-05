@@ -1,0 +1,5 @@
+# Local development processes, run by `make dev` with honcho. Ctrl-C stops all of them.
+web: cd backend && python manage.py runserver
+worker: cd backend && celery -A config worker --loglevel=info
+beat: cd backend && celery -A config beat --loglevel=info
+frontend: pnpm --dir frontend dev

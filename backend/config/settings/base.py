@@ -147,8 +147,8 @@ MAX_INSIGHTS_LOOKBACK_MINUTES = env.int("MAX_INSIGHTS_LOOKBACK_MINUTES", default
 EVENT_RETENTION_DAYS = env.int("EVENT_RETENTION_DAYS", default=30)
 EVENT_RETENTION_DELETE_BATCH_SIZE = env.int("EVENT_RETENTION_DELETE_BATCH_SIZE", default=10_000)
 
-# Needs a beat process: `celery -A config beat` (its own service in docker-compose.yml), or
-# `celery -A config worker -B` for a single development worker. Hourly keeps each purge small.
+# Needs exactly one beat process, `celery -A config beat`, as in docker-compose.yml and
+# Procfile.dev. Hourly keeps each purge small.
 CELERY_BEAT_SCHEDULE = {
     "purge-expired-events": {
         "task": "events.tasks.events.purge_expired_events_task",

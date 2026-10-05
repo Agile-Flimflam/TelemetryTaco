@@ -28,10 +28,19 @@ class Command(BaseCommand):
             default=2000,
             help="Number of events to generate (default: 2000)",
         )
+        parser.add_argument(
+            "--if-empty",
+            action="store_true",
+            help="Do nothing if any events exist (docker compose seeds on every start)",
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         clean = options["clean"]
         count = options["count"]
+
+        if options["if_empty"] and Event.objects.exists():
+            self.stdout.write("Events already exist, skipping the seed.")
+            return
 
         if clean:
             self.stdout.write(self.style.WARNING("Deleting all existing events..."))

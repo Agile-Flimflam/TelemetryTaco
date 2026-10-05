@@ -31,24 +31,26 @@ Three packages, three toolchains:
 
 ## Commands
 
-Run these from the repo root. They cover most of what CI checks, but not all of it. `pnpm validate:all` does **not** run Bandit (`pnpm security:backend`), build the Docker image (`docker build backend`), test on Postgres or on every supported Python version, or test the SDK from a clean install. See "What CI runs" below, and run the extra checks when your change touches those areas.
+The `Makefile` at the repo root is the one entry point; `make help` lists every target. `make validate` covers most of what CI checks, including Bandit, but not all of it. It does **not** build the Docker image (`docker build backend`), test on Postgres or on every supported Python version, or test the SDK from a clean install. See "What CI runs" below, and run the extra checks when your change touches those areas.
 
 ```bash
 # one-time setup (Poetry 2.x is required; CI pins 2.2.1)
-cd backend && poetry install && cd ..
-pnpm install
+make setup
 
-# backend: lint, format check, Django system check, tests
-pnpm validate:backend
+# backend: Ruff, format check, Bandit, Django system check, tests
+make validate-backend
 
 # frontend: regenerate API types, lint, type-check, tests, build
-pnpm validate:frontend
+make validate-frontend
 
 # SDK tests (borrows the backend's Poetry venv for pytest)
-pnpm test:sdk
+make test-sdk
 
 # everything
-pnpm validate:all
+make validate
+
+# run the app: Postgres and Redis in Docker, everything else from Procfile.dev
+make dev
 ```
 
 Narrower loops while iterating:
@@ -60,7 +62,7 @@ cd frontend && pnpm vitest run src/features/events                 # one fronten
 cd frontend && pnpm lint && pnpm type-check
 ```
 
-Backend and frontend tests need **no** running services. The test settings default to in-memory SQLite, an in-memory cache and eager Celery. Only the full app (`./start.sh` or `make dev`) needs Docker for Postgres and Redis.
+Backend and frontend tests need **no** running services. The test settings default to in-memory SQLite, an in-memory cache and eager Celery. Only the full app (`make dev`, or `docker compose up` for everything in containers) needs Docker for Postgres and Redis.
 
 ### What CI runs
 
@@ -78,7 +80,7 @@ Locally, tests run on SQLite by default. To match CI when your change touches qu
 
 ## Rules that span packages
 
-1. **The OpenAPI schema is the contract.** After changing any backend schema or endpoint, run `pnpm generate:api-types` and commit both `frontend/openapi.json` and `frontend/src/shared/api/generated.ts`. CI regenerates them and fails on any diff. Never hand-edit either file.
+1. **The OpenAPI schema is the contract.** After changing any backend schema or endpoint, run `make types` and commit both `frontend/openapi.json` and `frontend/src/shared/api/generated.ts`. CI regenerates them and fails on any diff. Never hand-edit either file.
 2. **Keep the API backward compatible.** The SDK and any deployed clients call `/api/capture` and `/api/capture/batch`. Add optional fields, don't rename or remove existing ones. If a breaking change is truly needed, flag it in the PR description.
 3. **Idempotency comes from `event_uuid`.** Every event carries a UUID, and the DB unique constraint plus `bulk_create(ignore_conflicts=True)` drop duplicates. Don't add a second dedup mechanism, and don't remove the UUID from any path.
 4. **Ingestion never writes to the DB in the request.** Capture endpoints validate, normalize and enqueue a Celery task, then return. Keep it that way.
@@ -89,7 +91,7 @@ Locally, tests run on SQLite by default. To match CI when your change touches qu
 
 Before you call a change finished:
 
-- [ ] `pnpm validate:all` passes, or at least the `validate:*` target for each package you touched.
+- [ ] `make validate` passes, or at least the `validate-*` target for each package you touched.
 - [ ] New behavior has a test. Bug fixes have a test that fails without the fix.
 - [ ] API changes: types regenerated and committed (rule 1), and the README's API section updated.
 - [ ] Model changes: `poetry run python manage.py makemigrations` was run, and the migration was read before committing.
@@ -103,7 +105,6 @@ These are known rough edges. Don't paper over them silently in an unrelated chan
 - **There is no authentication.** Every endpoint is public. Don't build features that assume a user or project exists without adding that layer first.
 - **Rate limits are per client IP.** That's `REMOTE_ADDR` unless `TRUSTED_PROXY_COUNT` is set, in which case it's read from `X-Forwarded-For` (`events/api/ratelimit.py`). They're configured with `RATE_LIMIT_*` settings, and the test settings set them effectively unlimited.
 - **Event time comes from `timestamp`, corrected by `sent_at`.** `services/ingestion.py` keeps the client's `sent_at - timestamp` gap and anchors it to the server's receive time. A `sent_at` alone is still stored as the event time, because older clients sent it that way.
-- **Several overlapping ways to run things** exist: `start.sh`, `stop.sh`, `restart-backend.sh`, `seed.sh`, the `Makefile` and root `package.json` scripts. Prefer the `pnpm` scripts above, and don't add new shell scripts.
 
 ## Style
 
