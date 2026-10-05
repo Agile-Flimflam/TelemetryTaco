@@ -1,36 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiFetch, ApiError, buildApiUrl } from '@/shared/api/client'
+import { apiGet } from '@/shared/api/client'
 import { POLL_INTERVAL_MS } from '@/shared/api/polling'
-import type { EventStats, HealthStatus } from '@/shared/api/types'
 
 export const statsQueryKey = ['stats'] as const
 export const healthQueryKey = ['health'] as const
 
-async function fetchStats() {
-  try {
-    return await apiFetch<EventStats>('/api/stats')
-  } catch (error) {
-    if (error instanceof TypeError) {
-      throw new Error('Failed to fetch stats. Is the backend server running on port 8000?')
-    }
-
-    if (error instanceof ApiError) {
-      throw new Error(`Failed to fetch stats (HTTP ${error.status}).`)
-    }
-
-    throw error
-  }
+function fetchStats() {
+  return apiGet('/api/stats', { resource: 'stats' })
 }
 
 // The readiness endpoint answers 503 with a body when a dependency is down,
-// so read the body for both 200 and 503 instead of going through apiFetch.
-async function fetchHealth(): Promise<HealthStatus> {
-  const response = await fetch(buildApiUrl('/api/health/ready'))
-  if (response.ok || response.status === 503) {
-    return (await response.json()) as HealthStatus
-  }
-
-  throw new ApiError(`Request failed with status ${response.status}`, response.status)
+// so that body is a valid result rather than an error.
+function fetchHealth() {
+  return apiGet('/api/health/ready', { resource: 'API health', acceptStatuses: [503] })
 }
 
 export function useStatsQuery() {
