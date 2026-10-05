@@ -27,7 +27,7 @@ local_settings.py
 *.sqlite3-journal
 celerybeat-schedule*
 /media
-/staticfiles
+staticfiles/
 
 # Docker
 *.pid

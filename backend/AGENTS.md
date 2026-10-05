@@ -93,3 +93,7 @@ poetry run python manage.py check_db        # optional: is the dev database reac
 ```
 
 If you changed an endpoint or schema, regenerate frontend types from the repo root with `make types`. `make validate-backend` runs all of the above except `check_db`.
+
+## Docker image
+
+`Dockerfile` has two images. The default (last) stage, `runtime`, is the production image: main dependencies only, gunicorn configured by `gunicorn.conf.py`, a non-root user, and collected static files served by WhiteNoise. The `dev` stage adds the dev dependencies and runs `runserver`; `docker-compose.yml` builds it and mounts the source over `/app`. Both install into `/opt/venv`, so the mount never hides the dependencies. `.dockerignore` keeps `.env` and the tests out of the image.

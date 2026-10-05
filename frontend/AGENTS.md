@@ -85,3 +85,7 @@ Vite reads `VITE_*` variables from `frontend/.env`, `frontend/.env.local` and `f
 | `VITE_API_URL` | empty (same origin, via the dev proxy) | Base URL of the backend API when it's served from a different origin |
 
 `API_PROXY_TARGET` (default `http://localhost:8000`) sets where the dev server proxies `/api`. It isn't a `VITE_*` variable: `vite.config.ts` reads it from the shell environment, not from `.env` files, and it never reaches the bundle.
+
+## Production image
+
+`frontend/Dockerfile` builds from the repo root (`docker build -f frontend/Dockerfile .`), because the pnpm lockfile lives there. nginx serves `dist/` on port 8080 and proxies `/api`, `/admin` and `/static` to `API_UPSTREAM` (default `http://backend:8000`), which is read when the container starts. `VITE_API_URL` is a build argument; leave it empty to use the proxy.

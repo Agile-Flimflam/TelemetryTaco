@@ -31,7 +31,7 @@ Three packages, three toolchains:
 
 ## Commands
 
-The `Makefile` at the repo root is the one entry point; `make help` lists every target. `make validate` covers most of what CI checks, including Bandit, but not all of it. It does **not** build the Docker image (`docker build backend`), test on Postgres or on every supported Python version, or test the SDK from a clean install. See "What CI runs" below, and run the extra checks when your change touches those areas.
+The `Makefile` at the repo root is the one entry point; `make help` lists every target. `make validate` covers most of what CI checks, including Bandit, but not all of it. It does **not** build the Docker images (`make images`), test on Postgres or on every supported Python version, or test the SDK from a clean install. See "What CI runs" below, and run the extra checks when your change touches those areas.
 
 ```bash
 # one-time setup (Poetry 2.x is required; CI pins 2.2.1); also installs the pre-commit hooks
@@ -66,7 +66,7 @@ Backend and frontend tests need **no** running services. The test settings defau
 
 ### What CI runs
 
-`.github/workflows/ci.yml` has these jobs (`codeql.yml` runs CodeQL separately):
+`.github/workflows/ci.yml` has these jobs (`codeql.yml` runs CodeQL separately, and `release.yml` publishes the images to GHCR when a `v*` tag is pushed):
 
 | Job | What it checks |
 |---|---|
@@ -74,7 +74,7 @@ Backend and frontend tests need **no** running services. The test settings defau
 | Backend tests | pytest with coverage on **Postgres 16** (via `TEST_DATABASE_URL`), on Python 3.11, 3.12 and 3.13 |
 | Frontend | `generated.ts` matches `openapi.json`, then ESLint, Prettier, `tsc`, Vitest with coverage, and the build |
 | SDK | installs `./sdk` into a clean venv and runs its tests on Python 3.11, 3.12 and 3.13 |
-| Docker image | builds `backend/Dockerfile` |
+| Docker image | builds the production backend and frontend images, and the backend `dev` stage that Compose uses |
 
 Locally, tests run on SQLite by default. To match CI when your change touches queries, JSON fields, string lengths or timezones, run them on Postgres (see `backend/AGENTS.md`).
 

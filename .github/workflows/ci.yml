@@ -236,5 +236,25 @@ jobs:
           context: backend
           push: false
           tags: telemetry-taco-backend:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      # The stage docker-compose.yml builds for local development.
+      - name: Build backend dev stage
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          target: dev
+          push: false
+          tags: telemetry-taco-backend:ci-dev
+          cache-from: type=gha,scope=backend
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          tags: telemetry-taco-frontend:ci
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
