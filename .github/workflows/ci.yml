@@ -16,7 +16,7 @@ permissions:
 env:
   # Keep in sync with backend/Dockerfile and the version that wrote backend/poetry.lock.
   POETRY_VERSION: "2.2.1"
-  NODE_VERSION: "20"
+  NODE_VERSION: "24"
 
 jobs:
   backend-lint:
