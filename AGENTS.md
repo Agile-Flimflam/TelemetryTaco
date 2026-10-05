@@ -31,10 +31,10 @@ Three packages, three toolchains:
 
 ## Commands
 
-Run these from the repo root. Each one is what CI runs, so a clean local run means CI should pass.
+Run these from the repo root. They cover most of what CI checks, but not all of it. `pnpm validate:all` does **not** run Bandit (`pnpm security:backend`), build the Docker image (`docker build backend`), test on Postgres or on every supported Python version, or test the SDK from a clean install. See "What CI runs" below, and run the extra checks when your change touches those areas.
 
 ```bash
-# one-time setup
+# one-time setup (Poetry 2.x is required; CI pins 2.2.1)
 cd backend && poetry install && cd ..
 pnpm install
 
@@ -60,7 +60,21 @@ cd frontend && pnpm vitest run src/features/events                 # one fronten
 cd frontend && pnpm lint && pnpm type-check
 ```
 
-Backend and frontend tests need **no** running services. The test settings use SQLite, an in-memory cache and eager Celery. Only the full app (`./start.sh` or `make dev`) needs Docker for Postgres and Redis.
+Backend and frontend tests need **no** running services. The test settings default to in-memory SQLite, an in-memory cache and eager Celery. Only the full app (`./start.sh` or `make dev`) needs Docker for Postgres and Redis.
+
+### What CI runs
+
+`.github/workflows/ci.yml` has these jobs (`codeql.yml` runs CodeQL separately):
+
+| Job | What it checks |
+|---|---|
+| Backend lint | Ruff lint and format, Bandit, Django system check, and that `frontend/openapi.json` matches the exported schema |
+| Backend tests | pytest with coverage on **Postgres 16** (via `TEST_DATABASE_URL`), on Python 3.11, 3.12 and 3.13 |
+| Frontend | `generated.ts` matches `openapi.json`, then ESLint, `tsc`, Vitest with coverage, and the build |
+| SDK | installs `./sdk` into a clean venv and runs its tests on Python 3.11, 3.12 and 3.13 |
+| Docker image | builds `backend/Dockerfile` |
+
+Locally, tests run on SQLite by default. To match CI when your change touches queries, JSON fields, string lengths or timezones, run them on Postgres (see `backend/AGENTS.md`).
 
 ## Rules that span packages
 
@@ -91,7 +105,6 @@ These are known rough edges. Don't paper over them silently in an unrelated chan
 - **Rate limits are per client IP.** That's `REMOTE_ADDR` unless `TRUSTED_PROXY_COUNT` is set, in which case it's read from `X-Forwarded-For` (`core/api/ratelimit.py`). They're configured with `RATE_LIMIT_*` settings, and the test settings set them effectively unlimited.
 - **Event time comes from `timestamp`, corrected by `sent_at`.** `services/ingestion.py` keeps the client's `sent_at - timestamp` gap and anchors it to the server's receive time. A `sent_at` alone is still stored as the event time, because older clients sent it that way.
 - **Several overlapping ways to run things** exist: `start.sh`, `stop.sh`, `restart-backend.sh`, `seed.sh`, the `Makefile` and root `package.json` scripts. Prefer the `pnpm` scripts above, and don't add new shell scripts.
-- `backend/test.sqlite3` is a committed artifact of the test settings. Don't commit changes to it.
 
 ## Style
 
