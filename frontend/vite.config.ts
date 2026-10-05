@@ -36,13 +36,18 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'query-vendor': ['@tanstack/react-query'],
-          'recharts-vendor': ['recharts'],
-          'ui-vendor': ['class-variance-authority', 'clsx', 'tailwind-merge', 'lucide-react'],
+        codeSplitting: {
+          groups: [
+            { name: 'react-vendor', test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: 'query-vendor', test: /[\\/]node_modules[\\/]@tanstack[\\/](react-query|query-core)[\\/]/ },
+            { name: 'recharts-vendor', test: /[\\/]node_modules[\\/]recharts[\\/]/ },
+            {
+              name: 'ui-vendor',
+              test: /[\\/]node_modules[\\/](class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
+            },
+          ],
         },
       },
     },
