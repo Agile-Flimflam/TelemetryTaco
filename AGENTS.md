@@ -34,7 +34,7 @@ Three packages, three toolchains:
 The `Makefile` at the repo root is the one entry point; `make help` lists every target. `make validate` covers most of what CI checks, including Bandit, but not all of it. It does **not** build the Docker image (`docker build backend`), test on Postgres or on every supported Python version, or test the SDK from a clean install. See "What CI runs" below, and run the extra checks when your change touches those areas.
 
 ```bash
-# one-time setup (Poetry 2.x is required; CI pins 2.2.1)
+# one-time setup (Poetry 2.x is required; CI pins 2.2.1); also installs the pre-commit hooks
 make setup
 
 # backend: Ruff, format check, Bandit, Django system check, tests
@@ -57,7 +57,7 @@ Narrower loops while iterating:
 
 ```bash
 cd backend && poetry run pytest events/tests/test_api.py -k cursor   # one backend test
-cd backend && poetry run ruff check --fix . && poetry run ruff format .
+make fmt                                                          # Ruff, ESLint --fix, Prettier
 cd frontend && pnpm vitest run src/features/events                 # one frontend folder
 cd frontend && pnpm lint && pnpm type-check
 ```
@@ -72,7 +72,7 @@ Backend and frontend tests need **no** running services. The test settings defau
 |---|---|
 | Backend lint | Ruff lint and format, Bandit, Django system check, and that `frontend/openapi.json` matches the exported schema |
 | Backend tests | pytest with coverage on **Postgres 16** (via `TEST_DATABASE_URL`), on Python 3.11, 3.12 and 3.13 |
-| Frontend | `generated.ts` matches `openapi.json`, then ESLint, `tsc`, Vitest with coverage, and the build |
+| Frontend | `generated.ts` matches `openapi.json`, then ESLint, Prettier, `tsc`, Vitest with coverage, and the build |
 | SDK | installs `./sdk` into a clean venv and runs its tests on Python 3.11, 3.12 and 3.13 |
 | Docker image | builds `backend/Dockerfile` |
 
@@ -110,6 +110,7 @@ These are known rough edges. Don't paper over them silently in an unrelated chan
 
 - Match the surrounding code. Comments explain *why*, not *what*.
 - Python: type hints on every function, modern syntax (`list[str]`, `X | None`), Ruff for lint and format (line length 100).
-- TypeScript: `strict` mode, no `any` (ESLint enforces this), `@/` imports instead of deep relative paths.
+- TypeScript: `strict` mode, no `any` (ESLint enforces this), `@/` imports instead of deep relative paths, Prettier for format (`frontend/.prettierrc.json`).
+- The pre-commit hooks (`.pre-commit-config.yaml`) run Ruff, Prettier and ESLint on staged files, using the same versions as CI. `.editorconfig` sets indentation and line endings for everything else.
 - Name things after the domain (`event`, `insight`, `distinct_id`), not the framework.
 - Commits: imperative mood, a short subject (`Add event name filter to /api/events`), and a body explaining why if it isn't obvious.

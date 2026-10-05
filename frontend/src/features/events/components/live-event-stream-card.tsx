@@ -1,6 +1,12 @@
 import { startTransition, useDeferredValue, useState } from 'react'
 import { Badge } from '@/shared/ui/primitives/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/primitives/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/shared/ui/primitives/card'
 import { useEventsQuery } from '@/features/events/queries'
 import { PanelMessage } from '@/shared/ui/panel-message'
 import type { EventRecord } from '@/shared/api/types'
@@ -44,7 +50,9 @@ function EventRow({
       </div>
       {expanded ? (
         <div className="mt-3 grid gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
-          <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Properties</div>
+          <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+            Properties
+          </div>
           <pre className="overflow-x-auto rounded-xl bg-muted/30 p-3 text-xs leading-6 text-foreground">
             {JSON.stringify(event.properties, null, 2)}
           </pre>
@@ -84,11 +92,7 @@ export function LiveEventStreamCard({ limit }: LiveEventStreamCardProps) {
       </CardHeader>
       <CardContent>
         {error ? (
-          <PanelMessage
-            title="Event stream unavailable"
-            description={error.message}
-            tone="error"
-          />
+          <PanelMessage title="Event stream unavailable" description={error.message} tone="error" />
         ) : isLoading && deferredEvents.length === 0 ? (
           <PanelMessage
             title="Loading events"

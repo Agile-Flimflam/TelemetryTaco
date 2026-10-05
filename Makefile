@@ -14,9 +14,10 @@ help: ## Show this help
 
 ## Running
 
-setup: ## Install backend and frontend dependencies
+setup: ## Install dependencies and the pre-commit hooks
 	cd backend && poetry install
 	pnpm install
+	poetry --project backend run pre-commit install
 
 services: ## Start Postgres and Redis in Docker
 	$(COMPOSE) up -d --wait db redis
@@ -52,14 +53,16 @@ lint-backend: ## Ruff, Ruff format check and Bandit
 	$(BACKEND) ruff format --check .
 	$(BACKEND) bandit -q -r . -c bandit.yaml
 
-lint-frontend: ## ESLint and tsc
+lint-frontend: ## ESLint, Prettier check and tsc
 	$(FRONTEND) lint
+	$(FRONTEND) format:check
 	$(FRONTEND) type-check
 
-fmt: ## Fix lint issues and format the backend
+fmt: ## Fix lint issues and format everything
 	$(BACKEND) ruff check --fix .
 	$(BACKEND) ruff format .
 	$(FRONTEND) lint --fix
+	$(FRONTEND) format
 
 check: ## Django system check
 	cd backend && DJANGO_SETTINGS_MODULE=config.settings.test poetry run python manage.py check
