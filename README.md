@@ -52,7 +52,7 @@ Python SDK / API clients
 
 - Python 3.11, 3.12, or 3.13
 - Poetry
-- Node.js 18+ and `pnpm`
+- Node.js 22.22+ or 24 and `pnpm`
 - Docker and Docker Compose
 
 ### Local development

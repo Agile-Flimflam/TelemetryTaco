@@ -315,8 +315,7 @@ def test_events_endpoint_supports_stable_cursor_for_same_timestamp_rows(client):
         data={
             "limit": 5,
             "before": (
-                f"{same_timestamp_higher_id.timestamp.isoformat()},"
-                f"{same_timestamp_higher_id.id}"
+                f"{same_timestamp_higher_id.timestamp.isoformat()},{same_timestamp_higher_id.id}"
             ),
         },
     )
