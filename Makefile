@@ -28,8 +28,10 @@ down: ## Stop every Docker service (data volumes are kept)
 migrate: ## Apply database migrations
 	$(BACKEND) python manage.py migrate --fake-initial
 
+# honcho exports ./.env to every process by default, which would override backend/.env (the file
+# the settings read) with Docker-only hostnames from a root .env. --env /dev/null turns that off.
 dev: services migrate ## Run the API, worker, beat and frontend locally; Ctrl-C stops them all
-	poetry --project backend run honcho --procfile Procfile.dev start
+	poetry --project backend run honcho --env /dev/null --procfile Procfile.dev start
 
 docker: ## Run the whole stack in Docker, seeded with demo data
 	$(COMPOSE) up --build
