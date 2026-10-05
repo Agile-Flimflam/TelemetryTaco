@@ -8,13 +8,15 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "generate:api-types": "openapi-typescript ./openapi.json -o ./src/shared/api/generated.ts",
     "preview": "vite preview",
-    "validate:all": "pnpm lint && pnpm type-check && pnpm test && pnpm build"
+    "validate:all": "pnpm lint && pnpm format:check && pnpm type-check && pnpm test && pnpm build"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.1",
@@ -44,6 +46,7 @@
     "jsdom": "^30.1.2",
     "openapi-typescript": "^7.8.0",
     "postcss": "^8.5.28",
+    "prettier": "^3.9.9",
     "tailwindcss": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.3.3",

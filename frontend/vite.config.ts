@@ -33,7 +33,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary', 'lcov'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/shared/api/generated.ts', 'src/vite-env.d.ts'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/test/**',
+        'src/shared/api/generated.ts',
+        'src/vite-env.d.ts',
+      ],
     },
   },
   build: {
@@ -44,8 +49,14 @@ export default defineConfig({
           // keeps it. Recharts depends on clsx, so if recharts-vendor came before ui-vendor,
           // clsx would land in the Recharts chunk and the entry would preload all of Recharts.
           groups: [
-            { name: 'react-vendor', test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
-            { name: 'query-vendor', test: /[\\/]node_modules[\\/]@tanstack[\\/](react-query|query-core)[\\/]/ },
+            {
+              name: 'react-vendor',
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+            },
+            {
+              name: 'query-vendor',
+              test: /[\\/]node_modules[\\/]@tanstack[\\/](react-query|query-core)[\\/]/,
+            },
             {
               name: 'ui-vendor',
               test: /[\\/]node_modules[\\/](class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,

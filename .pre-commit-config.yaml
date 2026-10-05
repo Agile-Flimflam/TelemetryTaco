@@ -1,0 +1,30 @@
+# `make setup` installs these hooks. Each one runs the tool from the repo's own lockfiles
+# (Poetry for Ruff, pnpm for ESLint and Prettier), so the versions always match CI.
+# The frontend hooks cd into frontend/ so Prettier and ESLint find their config and ignore
+# files, and strip that prefix from the paths pre-commit passes in.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        entry: poetry --project backend run ruff check --fix --force-exclude
+        language: system
+        types: [python]
+        files: ^backend/
+      - id: ruff-format
+        name: ruff format
+        entry: poetry --project backend run ruff format --force-exclude
+        language: system
+        types: [python]
+        files: ^backend/
+      - id: prettier
+        name: prettier
+        entry: bash -c 'cd frontend && pnpm exec prettier --write --ignore-unknown "${@#frontend/}"' --
+        language: system
+        types: [text]
+        files: ^frontend/
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend && pnpm exec eslint --max-warnings 0 "${@#frontend/}"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js)$

@@ -1,5 +1,11 @@
 import { Suspense, lazy } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/primitives/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/shared/ui/primitives/card'
 import { useInsightsQuery } from '@/features/insights/queries'
 import { PanelMessage } from '@/shared/ui/panel-message'
 
@@ -19,7 +25,9 @@ export function InsightChartCard({ lookbackMinutes }: InsightChartCardProps) {
     <Card className="border-border/70 bg-card/80 shadow-[0_24px_80px_-48px_rgba(0,0,0,0.85)]">
       <CardHeader>
         <CardTitle>Event insights</CardTitle>
-        <CardDescription>Minute-level event counts over the last {lookbackMinutes} minutes.</CardDescription>
+        <CardDescription>
+          Minute-level event counts over the last {lookbackMinutes} minutes.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {error ? (

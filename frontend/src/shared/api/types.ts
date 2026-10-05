@@ -1,12 +1,7 @@
 import type { components } from '@/shared/api/generated'
 
 export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue }
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
 
 type EventSchema = components['schemas']['EventResponseSchema']
 

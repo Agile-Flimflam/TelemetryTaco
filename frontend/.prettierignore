@@ -1,0 +1,6 @@
+dist
+coverage
+# Generated from the backend schema; CI fails if they differ from a fresh export.
+openapi.json
+src/shared/api/generated.ts
+*.md

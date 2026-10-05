@@ -68,7 +68,8 @@ pnpm test:coverage                         # as CI runs it
 ## Checks before pushing
 
 ```bash
-pnpm lint && pnpm type-check && pnpm test && pnpm build
+pnpm lint && pnpm format:check && pnpm type-check && pnpm test && pnpm build
+pnpm format                                 # Prettier --write; the pre-commit hook does this for staged files
 ```
 
 ## Dev server

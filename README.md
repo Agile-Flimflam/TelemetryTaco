@@ -67,7 +67,7 @@ Prerequisites:
 - `make`
 
 ```bash
-make setup   # install backend and frontend dependencies
+make setup   # install dependencies and the pre-commit hooks
 make dev     # Postgres and Redis in Docker, then the API, worker, beat and frontend
 make seed    # optional: add demo events
 ```
@@ -82,8 +82,8 @@ The settings defaults match `make dev`. To change one, copy `backend/.env.exampl
 
 ```bash
 make types       # export the backend OpenAPI schema and regenerate frontend types
-make lint        # Ruff, Bandit, ESLint and tsc
-make fmt         # fix lint issues and format the backend
+make lint        # Ruff, Bandit, ESLint, Prettier and tsc
+make fmt         # fix lint issues and format everything
 make test        # backend, frontend and SDK tests
 make validate    # what CI runs that needs no Docker: types, lint, Django check, tests, build
 make seed ARGS="--clean --count 5000"   # wipe and reseed demo events
