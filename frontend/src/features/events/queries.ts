@@ -1,24 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiFetch, ApiError } from '@/shared/api/client'
+import { apiGet } from '@/shared/api/client'
 import { POLL_INTERVAL_MS } from '@/shared/api/polling'
 import type { EventRecord } from '@/shared/api/types'
 
 export const eventsQueryKey = ['events'] as const
 
 async function fetchEvents(limit: number) {
-  try {
-    return await apiFetch<EventRecord[]>(`/api/events?limit=${limit}`)
-  } catch (error) {
-    if (error instanceof TypeError) {
-      throw new Error('Failed to fetch events. Is the backend server running on port 8000?')
-    }
-
-    if (error instanceof ApiError) {
-      throw new Error(`Failed to fetch events (HTTP ${error.status}).`)
-    }
-
-    throw error
-  }
+  const events = await apiGet('/api/events', { query: { limit }, resource: 'events' })
+  return events as EventRecord[]
 }
 
 export function useEventsQuery(limit: number) {

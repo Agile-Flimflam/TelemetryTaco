@@ -1,29 +1,8 @@
-import { Suspense, lazy } from 'react'
 import { LiveEventStreamCard } from '@/features/events/components/live-event-stream-card'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ApiHealthIndicator } from '@/features/overview/components/api-health-indicator'
 import { StatsStrip } from '@/features/overview/components/stats-strip'
-
-const InsightChartCard = lazy(async () => {
-  const module = await import('@/features/insights/components/insight-chart-card')
-  return { default: module.InsightChartCard }
-})
-
-function InsightCardFallback() {
-  return (
-    <Card className="border-border/70 bg-card/80 shadow-[0_24px_80px_-48px_rgba(0,0,0,0.85)]">
-      <CardHeader>
-        <CardTitle>Event insights</CardTitle>
-        <CardDescription>Loading the chart.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex h-[320px] items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 text-sm text-muted-foreground">
-          Preparing chart module...
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+import { InsightChartCard } from '@/features/insights/components/insight-chart-card'
+import { CardErrorBoundary } from '@/shared/ui/card-error-boundary'
 
 function App() {
   return (
@@ -41,13 +20,17 @@ function App() {
           <ApiHealthIndicator />
         </header>
 
-        <StatsStrip />
+        <CardErrorBoundary title="Event summary">
+          <StatsStrip />
+        </CardErrorBoundary>
 
         <main className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <Suspense fallback={<InsightCardFallback />}>
+          <CardErrorBoundary title="Event insights">
             <InsightChartCard lookbackMinutes={60} />
-          </Suspense>
-          <LiveEventStreamCard limit={100} />
+          </CardErrorBoundary>
+          <CardErrorBoundary title="Live event stream">
+            <LiveEventStreamCard limit={100} />
+          </CardErrorBoundary>
         </main>
       </div>
     </div>

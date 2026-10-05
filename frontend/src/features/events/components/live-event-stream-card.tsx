@@ -1,6 +1,6 @@
 import { startTransition, useDeferredValue, useState } from 'react'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/shared/ui/primitives/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/primitives/card'
 import { useEventsQuery } from '@/features/events/queries'
 import { PanelMessage } from '@/shared/ui/panel-message'
 import type { EventRecord } from '@/shared/api/types'

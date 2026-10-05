@@ -6,18 +6,18 @@ React 18 + Vite + TypeScript dashboard. Read the root [`AGENTS.md`](../AGENTS.md
 
 ```
 frontend/src/
-├── main.tsx                 # entry; wraps <App/> in AppProviders
+├── main.tsx                 # entry; wraps @/app/App in AppProviders
 ├── app/                     # app shell: App.tsx, providers.tsx, query-client.ts
 ├── features/<feature>/      # one folder per product area (events, insights, overview)
 │   ├── queries.ts           # React Query hooks + fetchers for this feature
 │   └── components/          # feature components and their *.test.tsx files
 ├── shared/
 │   ├── api/
-│   │   ├── client.ts        # apiFetch + ApiError; the only place that calls fetch()
+│   │   ├── client.ts        # apiGet + ApiError; the only place that calls fetch()
 │   │   ├── generated.ts     # GENERATED from openapi.json; never edit by hand
 │   │   └── types.ts         # friendly aliases over generated types
-│   └── ui/                  # app-specific shared components (PanelMessage)
-├── components/ui/           # shadcn/ui primitives (button, card, badge, table)
+│   └── ui/                  # shared components (PanelMessage, CardErrorBoundary)
+│       └── primitives/      # shadcn/ui primitives (button, card, badge, table)
 ├── lib/utils.ts             # cn() class-name helper
 └── test/                    # setup.ts + renderWithProviders
 ```
@@ -25,9 +25,9 @@ frontend/src/
 ## Where code goes
 
 - **New product area:** create `features/<name>/` with its own `queries.ts` and `components/`. Features don't import from each other. Move anything shared into `shared/`.
-- **API calls:** a fetcher in the feature's `queries.ts` that calls `apiFetch` from `@/shared/api/client`, wrapped in a `useQuery` hook. Components never call `fetch` directly.
+- **API calls:** a fetcher in the feature's `queries.ts` that calls `apiGet` from `@/shared/api/client`, wrapped in a `useQuery` hook. `apiGet` takes a path from the OpenAPI schema and type-checks its query and path params and its response, and it turns network and HTTP failures into readable error messages. Components never call `fetch` directly.
 - **API types:** import from `@/shared/api/types`. If a type is missing there, add an alias over `components['schemas'][...]` from `generated.ts`. Don't redeclare backend shapes by hand.
-- **UI primitives:** use the shadcn components in `components/ui/` before writing new ones. To add one, use the shadcn CLI (`pnpm dlx shadcn@latest add <component>`), which respects `components.json`.
+- **UI primitives:** use the shadcn components in `shared/ui/primitives/` before writing new ones. To add one, use the shadcn CLI (`pnpm dlx shadcn@latest add <component>`), which respects `components.json`.
 - **App-specific shared UI** goes in `shared/ui/`.
 
 ## API types workflow
@@ -49,6 +49,7 @@ CI regenerates both files and fails on any diff. If the backend changed, regener
 - Polling intervals live in `src/shared/api/polling.ts`, and the query hooks read them from there. Each viewer's polls count against the backend's per-IP rate limits (a 10 s interval is 360 requests per hour), so `polling.test.ts` checks every interval against the production defaults in `backend/telemetry_taco/settings/base.py`.
 - Heavy dependencies (Recharts) are lazy-loaded. Keep them out of the initial bundle.
 - Every async view needs a visible error state. Use `PanelMessage` with `tone="error"`.
+- Each dashboard card is wrapped in `CardErrorBoundary` in `app/App.tsx`, so a render bug in one card doesn't blank the page. Wrap new cards the same way.
 
 ## Testing
 
