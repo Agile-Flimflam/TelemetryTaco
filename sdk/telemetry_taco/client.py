@@ -1,6 +1,7 @@
 import atexit
 import json
 import logging
+import math
 import queue
 import threading
 import time
@@ -16,6 +17,9 @@ logger = logging.getLogger("telemetry_taco")
 
 QueueFullPolicy = Literal["block", "drop_newest", "drop_oldest"]
 _STOP = object()
+# The longest Retry-After the worker will wait out. Waiting blocks every other batch, so a
+# longer wait (an hourly rate-limit window) drops the batch instead.
+_MAX_RETRY_AFTER_SECONDS = 30.0
 
 
 @dataclass(frozen=True)
@@ -50,6 +54,16 @@ def _normalize_base_url(base_url: str) -> str:
         raise ValueError("base_url must be an absolute http:// or https:// URL")
 
     return normalized.rstrip("/")
+
+
+def _retry_after_seconds(error: urllib.error.HTTPError) -> float:
+    # The server sends delta-seconds. An HTTP date or a missing header gets a short default.
+    headers = error.headers
+    try:
+        seconds = float(headers.get("Retry-After", "") if headers is not None else "")
+    except ValueError:
+        return 1.0
+    return max(seconds, 0.0) if math.isfinite(seconds) else 1.0
 
 
 class TelemetryTaco:
@@ -310,6 +324,18 @@ class TelemetryTaco:
                     response.read()
                 return
             except urllib.error.HTTPError as exc:
+                if exc.code == 429:
+                    retry_after = _retry_after_seconds(exc)
+                    if attempt >= self.max_retries or retry_after > _MAX_RETRY_AFTER_SECONDS:
+                        logger.error(
+                            "TelemetryTaco rate limited; dropping %s event(s). "
+                            "The server asked to retry after %.0f seconds.",
+                            len(batch),
+                            retry_after,
+                        )
+                        return
+                    time.sleep(retry_after)
+                    continue
                 if 400 <= exc.code < 500:
                     logger.error(
                         "TelemetryTaco rejected event batch: %s %s",

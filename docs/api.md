@@ -10,7 +10,7 @@ There is no authentication yet (#30): every endpoint is public.
 |---|---|
 | 400 | A request the API refuses as a whole: an empty or oversized batch (over `MAX_CAPTURE_BATCH_SIZE`, default 500), a `limit` or `lookback_minutes` below 1, or a malformed `before` cursor. The body is `{"detail": "..."}`. |
 | 422 | A payload that fails validation, with Ninja's description of each problem. In a batch, one invalid event rejects the whole request. |
-| 403 | A client over its rate limit. (This should be 429; the backend currently answers with Django's 403 page.) |
+| 429 | A client over its rate limit. The body is `{"detail": "..."}`, and `Retry-After` gives the seconds until the limit resets. |
 | 503 | `/api/health/ready` when Postgres or Redis is unreachable. |
 
 Rate limits are per client IP and set per endpoint group: `RATE_LIMIT_CAPTURE_EVENT` for both capture endpoints, `RATE_LIMIT_LIST_EVENTS` for `/api/events`, and `RATE_LIMIT_GET_INSIGHTS` for `/api/insights` and `/api/stats`. See [deployment.md](deployment.md#configuration) for the defaults and for running behind a proxy.

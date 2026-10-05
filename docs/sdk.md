@@ -40,14 +40,15 @@ The client raises in only three cases: `ValueError` from the constructor for an 
 | `max_queue_size` | 1000 | Events held in memory before `queue_full_policy` applies. |
 | `queue_full_policy` | `"drop_newest"` | `"drop_newest"`, `"drop_oldest"`, or `"block"`. `"block"` waits up to `request_timeout` for room, then drops the event. |
 | `request_timeout` | 5.0 | Seconds per HTTP request. |
-| `max_retries` | 2 | Retries after a network error or a 5xx, with a short backoff. |
+| `max_retries` | 2 | Retries after a network error or a 5xx (with a short backoff), or a 429 (after `Retry-After`). |
 | `exit_timeout` | 5.0 | Upper bound on the flush at interpreter exit, so a dead server can't hang it. |
 
 ## Delivery
 
 - Each event gets its `event_uuid` when you call `capture()`, and keeps it across retries, so the server stores it once however many times it's sent. See [architecture.md](architecture.md#idempotency).
 - Each batch is stamped with `sent_at` per attempt, so the server can correct for a wrong client clock and for time spent queued or retrying.
-- A 4xx response means the server refused the batch, which retrying won't change, so the batch is dropped and logged. That includes a rate-limited request, which currently gets a 403.
+- A 429 (rate limited) is retried after the server's `Retry-After`, up to `max_retries` times. If the server asks for a wait over 30 seconds, the batch is dropped and logged instead, since waiting would hold up every other batch.
+- Any other 4xx response means the server refused the batch, which retrying won't change, so the batch is dropped and logged.
 - The SDK never raises from the worker thread. Dropped events and failed requests are logged to the `telemetry_taco` logger, so configure logging to see them.
 
 ## Wire format

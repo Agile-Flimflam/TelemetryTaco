@@ -35,6 +35,7 @@ Notable changes to TelemetryTaco. The format follows [Keep a Changelog](https://
 
 ### Fixed
 
+- A client over its rate limit gets a 429 JSON response with `Retry-After`, instead of a 403 HTML page. The SDK retries it rather than dropping the batch.
 - Capture rejects values the database can't store (over-long strings, NUL characters) with a 422, instead of accepting them and losing the batch in the worker.
 - The insights chart no longer exceeds the production rate limit while polling.
 - Docker Compose sets `CACHE_URL`, so rate limits and readiness checks use Redis.
