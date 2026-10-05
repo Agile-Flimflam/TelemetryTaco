@@ -45,15 +45,15 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["telemetry_taco", "core"]
+known-first-party = ["config", "events"]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "telemetry_taco.settings.test"
+DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["test_*.py", "*_tests.py"]
 
 [tool.coverage.run]
-source = ["core", "telemetry_taco"]
-omit = ["*/migrations/*", "*/tests/*", "telemetry_taco/asgi.py", "telemetry_taco/wsgi.py"]
+source = ["events", "config"]
+omit = ["*/migrations/*", "*/tests/*", "config/asgi.py", "config/wsgi.py"]
 
 [build-system]
 requires = ["poetry-core"]

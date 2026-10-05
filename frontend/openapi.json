@@ -8,7 +8,7 @@
   "paths": {
     "/api/capture": {
       "post": {
-        "operationId": "core_api_events_capture_event",
+        "operationId": "events_api_events_capture_event",
         "summary": "Capture Event",
         "parameters": [],
         "responses": {
@@ -37,7 +37,7 @@
     },
     "/api/capture/batch": {
       "post": {
-        "operationId": "core_api_events_capture_event_batch",
+        "operationId": "events_api_events_capture_event_batch",
         "summary": "Capture Event Batch",
         "parameters": [],
         "responses": {
@@ -66,7 +66,7 @@
     },
     "/api/events": {
       "get": {
-        "operationId": "core_api_events_list_events",
+        "operationId": "events_api_events_list_events",
         "summary": "List Events",
         "parameters": [
           {
@@ -116,7 +116,7 @@
     },
     "/api/insights": {
       "get": {
-        "operationId": "core_api_events_get_event_insights",
+        "operationId": "events_api_events_get_event_insights",
         "summary": "Get Event Insights",
         "parameters": [
           {
@@ -150,7 +150,7 @@
     },
     "/api/stats": {
       "get": {
-        "operationId": "core_api_events_get_stats",
+        "operationId": "events_api_events_get_stats",
         "summary": "Get Stats",
         "parameters": [],
         "responses": {
@@ -169,7 +169,7 @@
     },
     "/api/health/live": {
       "get": {
-        "operationId": "core_api_events_liveness",
+        "operationId": "events_api_events_liveness",
         "summary": "Liveness",
         "parameters": [],
         "responses": {
@@ -188,7 +188,7 @@
     },
     "/api/health/ready": {
       "get": {
-        "operationId": "core_api_events_readiness",
+        "operationId": "events_api_events_readiness",
         "summary": "Readiness",
         "parameters": [],
         "responses": {

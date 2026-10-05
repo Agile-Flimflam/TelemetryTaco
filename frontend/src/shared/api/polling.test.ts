@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import baseSettings from '../../../../backend/telemetry_taco/settings/base.py?raw'
+import baseSettings from '../../../../backend/config/settings/base.py?raw'
 import { POLL_INTERVAL_MS } from '@/shared/api/polling'
 
 const SECONDS_PER_UNIT: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 }

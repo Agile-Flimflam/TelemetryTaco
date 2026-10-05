@@ -2,7 +2,7 @@
 
 exclude_dirs:
   - .venv
-  - core/migrations
+  - events/migrations
 
 # Each skip below is needed today; remove it if the reason goes away.
 # B101 assert_used: pytest tests use plain asserts.

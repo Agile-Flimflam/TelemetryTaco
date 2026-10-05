@@ -28,10 +28,10 @@ EVENT_RETENTION_DAYS=30
 
 Settings modules:
 
-- default local development: `telemetry_taco.settings`
-- explicit development: `telemetry_taco.settings.development`
-- tests: `telemetry_taco.settings.test`
-- production: `telemetry_taco.settings.production`
+- default local development: `config.settings`
+- explicit development: `config.settings.development`
+- tests: `config.settings.test`
+- production: `config.settings.production`
 
 ## Install
 
@@ -56,6 +56,8 @@ Run migrations:
 poetry run python manage.py migrate
 ```
 
+A database created before the Django app was renamed from `core` to `events` already has the `core_event` table, so run `poetry run python manage.py migrate --fake-initial` once instead.
+
 Start the API server:
 
 ```bash
@@ -65,7 +67,7 @@ poetry run python manage.py runserver
 Start the worker in another shell:
 
 ```bash
-poetry run celery -A core worker -B --loglevel=info
+poetry run celery -A config worker -B --loglevel=info
 ```
 
 ## Validation
@@ -73,7 +75,7 @@ poetry run celery -A core worker -B --loglevel=info
 ```bash
 poetry run ruff check .
 poetry run ruff format --check .
-DJANGO_SETTINGS_MODULE=telemetry_taco.settings.test poetry run python manage.py check
+DJANGO_SETTINGS_MODULE=config.settings.test poetry run python manage.py check
 POETRY_CACHE_DIR=/tmp/pypoetry-cache poetry run pytest
 ```
 
@@ -100,7 +102,7 @@ poetry run python manage.py purge_expired_events
 Export the OpenAPI schema:
 
 ```bash
-DJANGO_SETTINGS_MODULE=telemetry_taco.settings.test poetry run python manage.py export_openapi_schema ../frontend/openapi.json
+DJANGO_SETTINGS_MODULE=config.settings.test poetry run python manage.py export_openapi_schema ../frontend/openapi.json
 ```
 
 ## Notes
