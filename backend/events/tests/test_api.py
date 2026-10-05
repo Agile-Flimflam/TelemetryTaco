@@ -6,8 +6,8 @@ import pytest
 from django.core.management import call_command
 from django.utils import timezone
 
-from events.api.schemas import HealthStatusResponse
 from events.models import Event
+from events.services.health import HealthStatus
 
 
 @pytest.mark.django_db
@@ -462,7 +462,7 @@ def test_readiness_reports_dependency_status(client):
 
 @pytest.mark.django_db
 def test_readiness_returns_503_when_dependencies_are_degraded(client):
-    degraded_status = HealthStatusResponse(status="degraded", database="error", cache="ok")
+    degraded_status = HealthStatus(status="degraded", database="error", cache="ok")
 
     with patch("events.api.events.get_readiness_status", return_value=degraded_status):
         response = client.get("/api/health/ready")

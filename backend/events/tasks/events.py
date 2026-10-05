@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from events.models import Event
-from events.selectors.events import purge_expired_events
+from events.services.retention import purge_expired_events
 
 logger = get_task_logger(__name__)
 

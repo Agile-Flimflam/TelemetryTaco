@@ -7,7 +7,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from events.models import Event
-from events.selectors.events import purge_expired_events
+from events.services.retention import purge_expired_events
 from events.tasks import purge_expired_events_task
 
 

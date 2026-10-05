@@ -18,8 +18,9 @@ from events.api.schemas import (
     StatusResponse,
 )
 from events.selectors.events import get_event_stats, get_insights, list_recent_events
-from events.services.health import get_liveness_status, get_readiness_status
-from events.services.ingestion import enqueue_events
+from events.services.exceptions import InvalidBatchError
+from events.services.health import HealthStatus, get_liveness_status, get_readiness_status
+from events.services.ingestion import CapturedEvent, enqueue_events
 
 router = Router()
 
@@ -52,17 +53,24 @@ def _parse_before_cursor(before: str | None) -> tuple[datetime, int | None] | No
     return parsed_before, before_id
 
 
+def _enqueue(events: list[EventCaptureSchema]) -> int:
+    try:
+        return enqueue_events([CapturedEvent(**event.model_dump()) for event in events])
+    except InvalidBatchError as exc:
+        raise HttpError(400, str(exc)) from exc
+
+
 @router.post("/capture", response=StatusResponse)
 @ratelimit(key="ip", rate=settings.RATE_LIMIT_CAPTURE_EVENT, method="POST", block=True)
 def capture_event(request, event: EventCaptureSchema) -> StatusResponse:
-    enqueue_events([event])
+    _enqueue([event])
     return StatusResponse(status="ok")
 
 
 @router.post("/capture/batch", response=BatchStatusResponse)
 @ratelimit(key="ip", rate=settings.RATE_LIMIT_CAPTURE_EVENT, method="POST", block=True)
 def capture_event_batch(request, payload: EventBatchCaptureSchema) -> BatchStatusResponse:
-    accepted = enqueue_events(payload.events)
+    accepted = _enqueue(payload.events)
     return BatchStatusResponse(status="ok", accepted=accepted)
 
 
@@ -91,7 +99,7 @@ def get_stats(request):
 
 
 @router.get("/health/live", response=HealthStatusResponse)
-def liveness(request) -> HealthStatusResponse:
+def liveness(request) -> HealthStatus:
     return get_liveness_status()
 
 
