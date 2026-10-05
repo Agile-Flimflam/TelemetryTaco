@@ -76,6 +76,22 @@ def test_capture_batch_persists_multiple_events(client):
 
 
 @pytest.mark.django_db
+def test_capture_batch_counts_repeated_event_uuids_once(client):
+    event_uuid = str(uuid4())
+    event = {"distinct_id": "user-1", "event_name": "page_view", "event_uuid": event_uuid}
+
+    response = client.post(
+        "/api/capture/batch",
+        data={"events": [event, event, {"distinct_id": "user-2", "event_name": "page_view"}]},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "accepted": 2}
+    assert Event.objects.count() == 2
+
+
+@pytest.mark.django_db
 def test_capture_batch_rejects_empty_batch(client):
     response = client.post(
         "/api/capture/batch",

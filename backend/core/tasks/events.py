@@ -4,7 +4,7 @@ from uuid import UUID
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
-from django.db import OperationalError
+from django.db import OperationalError, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -62,18 +62,28 @@ def _build_event(event_data: dict[str, Any]) -> Event:
 
 
 def _persist_events(events_data: list[dict[str, Any]]) -> int:
+    """Insert the events and return how many rows were actually written.
+
+    bulk_create(ignore_conflicts=True) silently skips uuids that already exist, so its input
+    length overcounts. Counting the batch's uuids before and after, in one transaction, gives the
+    real number; a concurrent insert of the same uuid can still skew it, which only affects logs.
+    """
     if not events_data:
         return 0
 
     events_to_create = [_build_event(event_data) for event_data in events_data]
+    batch_uuids = {event.uuid for event in events_to_create}
 
-    Event.objects.bulk_create(
-        events_to_create,
-        batch_size=len(events_to_create),
-        ignore_conflicts=True,
-    )
+    with transaction.atomic():
+        existing_before = Event.objects.filter(uuid__in=batch_uuids).count()
+        Event.objects.bulk_create(
+            events_to_create,
+            batch_size=len(events_to_create),
+            ignore_conflicts=True,
+        )
+        existing_after = Event.objects.filter(uuid__in=batch_uuids).count()
 
-    return len(events_to_create)
+    return existing_after - existing_before
 
 
 @shared_task(
@@ -84,17 +94,18 @@ def _persist_events(events_data: list[dict[str, Any]]) -> int:
     retry_kwargs={"max_retries": 5},
 )
 def process_event_batch_task(self, events_data: list[dict[str, Any]]) -> int:
-    processed_count = _persist_events(events_data)
+    inserted_count = _persist_events(events_data)
 
     logger.info(
         "processed_event_batch",
         extra={
             "task_name": self.name,
             "task_id": self.request.id,
-            "event_count": processed_count,
+            "received_count": len(events_data),
+            "inserted_count": inserted_count,
         },
     )
-    return processed_count
+    return inserted_count
 
 
 @shared_task(

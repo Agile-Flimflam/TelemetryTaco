@@ -83,7 +83,14 @@ def enqueue_events(events: list[EventCaptureSchema]) -> int:
         )
 
     received_at = timezone.now()
-    normalized = [_normalize_event(event, received_at=received_at) for event in events]
-    process_event_batch_task.delay([_serialize_event(event) for event in normalized])
+    # A uuid repeated within one request is the same event; only its first copy can be stored,
+    # so it's only counted once. Repeats of uuids stored earlier can't be known until the worker
+    # runs, so accepted still counts those.
+    unique_events: dict[UUID, NormalizedEvent] = {}
+    for event in events:
+        normalized = _normalize_event(event, received_at=received_at)
+        unique_events.setdefault(normalized.event_uuid, normalized)
 
-    return len(normalized)
+    process_event_batch_task.delay([_serialize_event(event) for event in unique_events.values()])
+
+    return len(unique_events)

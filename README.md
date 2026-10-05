@@ -199,6 +199,8 @@ Response:
 }
 ```
 
+The response's `accepted` is the number of distinct `event_uuid`s in the request. An event whose `event_uuid` was already stored is accepted but not stored again.
+
 ### `GET /api/events?limit=100&before=YYYY-MM-DDTHH:MM:SSZ,EVENT_ID`
 
 Returns recent events ordered by `timestamp desc, id desc`.
