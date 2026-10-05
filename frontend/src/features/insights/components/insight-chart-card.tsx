@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/primitives/card'
 import { useInsightsQuery } from '@/features/insights/queries'
 import { PanelMessage } from '@/shared/ui/panel-message'
 
