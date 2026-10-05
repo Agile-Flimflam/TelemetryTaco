@@ -6,6 +6,8 @@ Guidance for AI coding agents (and humans) working in this repository. Scoped gu
 - [`frontend/AGENTS.md`](frontend/AGENTS.md): React dashboard
 - [`sdk/AGENTS.md`](sdk/AGENTS.md): Python client library
 
+User-facing docs live in [`docs/`](docs/) (architecture, API, SDK, deployment) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 When guides disagree, the one closest to the file you are editing wins.
 
 ## What this project is
@@ -85,7 +87,7 @@ Locally, tests run on SQLite by default. To match CI when your change touches qu
 3. **Idempotency comes from `event_uuid`.** Every event carries a UUID, and the DB unique constraint plus `bulk_create(ignore_conflicts=True)` drop duplicates. Don't add a second dedup mechanism, and don't remove the UUID from any path.
 4. **Ingestion never writes to the DB in the request.** Capture endpoints validate, normalize and enqueue a Celery task, then return. Keep it that way.
 5. **The lockfiles are the source of truth.** Use `poetry add` / `pnpm add`. Don't add `requirements.txt`, `package-lock.json` or `yarn.lock`.
-6. **No secrets in the repo.** Configuration comes from environment variables (`django-environ` on the backend, `import.meta.env.VITE_*` on the frontend). Document new backend variables in `backend/.env.example`. Frontend `VITE_*` variables are read by Vite from `frontend/.env*` (not `backend/.env`), so document those in `frontend/AGENTS.md` and the README.
+6. **No secrets in the repo.** Configuration comes from environment variables (`django-environ` on the backend, `import.meta.env.VITE_*` on the frontend). Document new backend variables in `backend/.env.example` and `docs/deployment.md`. Frontend `VITE_*` variables are read by Vite from `frontend/.env*` (not `backend/.env`), so document those in `frontend/AGENTS.md` and `docs/deployment.md`.
 
 ## Definition of done
 
@@ -93,9 +95,10 @@ Before you call a change finished:
 
 - [ ] `make validate` passes, or at least the `validate-*` target for each package you touched.
 - [ ] New behavior has a test. Bug fixes have a test that fails without the fix.
-- [ ] API changes: types regenerated and committed (rule 1), and the README's API section updated.
+- [ ] API changes: types regenerated and committed (rule 1), and `docs/api.md` updated.
 - [ ] Model changes: `poetry run python manage.py makemigrations` was run, and the migration was read before committing.
-- [ ] New environment variables are documented: backend ones in `backend/.env.example`, frontend `VITE_*` ones in `frontend/AGENTS.md` and the README.
+- [ ] New environment variables are documented: backend ones in `backend/.env.example`, frontend `VITE_*` ones in `frontend/AGENTS.md`, and both in `docs/deployment.md`.
+- [ ] User-visible changes have a line under Unreleased in `CHANGELOG.md`.
 - [ ] The diff is limited to the task. Unrelated cleanup goes in its own PR.
 
 ## Things that will surprise you
