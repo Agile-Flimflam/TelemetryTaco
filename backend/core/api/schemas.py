@@ -83,7 +83,10 @@ class BatchStatusResponse(StatusResponse):
 
 
 class InsightDataPoint(Schema):
-    time: str
+    bucket: datetime = Field(description="Start of the minute, in UTC.")
+    time: str = Field(
+        description="Deprecated: the bucket as HH:MM in UTC. Format bucket on the client instead."
+    )
     count: int
 
 

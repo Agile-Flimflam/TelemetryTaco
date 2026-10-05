@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from django.conf import settings
 from django.db.models import Count, Q
@@ -26,25 +26,40 @@ def list_recent_events(*, limit: int, before: EventCursor | None = None) -> list
     return list(queryset[:bounded_limit])
 
 
-def get_insights(*, lookback_minutes: int) -> list[dict[str, int | str]]:
+def get_insights(*, lookback_minutes: int) -> list[dict[str, int | str | datetime]]:
+    """Return one point per minute, oldest first, ending with the current minute.
+
+    Minutes with no events are included with a count of 0, so a chart doesn't draw a line
+    across quiet periods, and a lookback of N minutes always returns N points.
+    """
     bounded_lookback = min(lookback_minutes, settings.MAX_INSIGHTS_LOOKBACK_MINUTES)
-    cutoff_time = timezone.now() - timedelta(minutes=bounded_lookback)
+    current_minute = timezone.now().astimezone(UTC).replace(second=0, microsecond=0)
+    first_minute = current_minute - timedelta(minutes=bounded_lookback - 1)
 
     aggregated = (
-        Event.objects.filter(timestamp__gte=cutoff_time)
-        .annotate(minute=TruncMinute("timestamp"))
+        Event.objects.filter(
+            timestamp__gte=first_minute,
+            timestamp__lt=current_minute + timedelta(minutes=1),
+        )
+        .annotate(minute=TruncMinute("timestamp", tzinfo=UTC))
         .values("minute")
         .annotate(count=Count("id"))
-        .order_by("minute")
+        .order_by()
     )
+    counts = {item["minute"]: item["count"] for item in aggregated}
 
-    return [
-        {
-            "time": item["minute"].strftime("%H:%M"),
-            "count": item["count"],
-        }
-        for item in aggregated
-    ]
+    points: list[dict[str, int | str | datetime]] = []
+    for offset in range(bounded_lookback):
+        bucket = first_minute + timedelta(minutes=offset)
+        points.append(
+            {
+                "bucket": bucket,
+                # Deprecated: HH:MM in UTC, kept for clients written before bucket existed.
+                "time": bucket.strftime("%H:%M"),
+                "count": counts.get(bucket, 0),
+            }
+        )
+    return points
 
 
 def get_event_stats(*, now: datetime | None = None) -> dict[str, int | datetime | None]:

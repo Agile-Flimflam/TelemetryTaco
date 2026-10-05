@@ -324,27 +324,59 @@ def test_events_endpoint_rejects_invalid_before_cursor(client):
     )
 
 
+INSIGHTS_NOW = datetime(2026, 10, 4, 12, 30, 45, tzinfo=UTC)
+
+
+def _get_insights(client, lookback_minutes: int):
+    with patch("core.selectors.events.timezone.now", return_value=INSIGHTS_NOW):
+        response = client.get(f"/api/insights?lookback_minutes={lookback_minutes}")
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.mark.django_db
+def test_insights_endpoint_zero_fills_every_minute(client):
+    Event.objects.create(distinct_id="a", event_name="page_view", timestamp=INSIGHTS_NOW)
+    Event.objects.create(
+        distinct_id="b", event_name="page_view", timestamp=INSIGHTS_NOW - timedelta(seconds=30)
+    )
+    Event.objects.create(
+        distinct_id="c", event_name="page_view", timestamp=INSIGHTS_NOW - timedelta(minutes=3)
+    )
+    # Outside the five-minute window on both sides.
+    Event.objects.create(
+        distinct_id="d", event_name="page_view", timestamp=INSIGHTS_NOW - timedelta(minutes=5)
+    )
+    Event.objects.create(
+        distinct_id="e", event_name="page_view", timestamp=INSIGHTS_NOW + timedelta(minutes=1)
+    )
+
+    points = _get_insights(client, 5)
+
+    assert [point["count"] for point in points] == [0, 1, 0, 0, 2]
+    assert points[0]["bucket"].startswith("2026-10-04T12:26:00")
+    assert points[-1]["bucket"].startswith("2026-10-04T12:30:00")
+    assert datetime.fromisoformat(points[-1]["bucket"]).utcoffset() == timedelta(0)
+    assert points[-1]["time"] == "12:30"
+
+
+@pytest.mark.django_db
+def test_insights_endpoint_returns_one_point_per_minute_without_duplicates(client, settings):
+    settings.MAX_INSIGHTS_LOOKBACK_MINUTES = 3000
+
+    points = _get_insights(client, 1500)
+
+    buckets = [point["bucket"] for point in points]
+    assert len(points) == 1500
+    assert len(set(buckets)) == 1500
+    assert all(point["count"] == 0 for point in points)
+
+
 @pytest.mark.django_db
 def test_insights_endpoint_respects_max_lookback(client, settings):
     settings.MAX_INSIGHTS_LOOKBACK_MINUTES = 30
-    now = timezone.now()
-    Event.objects.create(
-        distinct_id="recent",
-        event_name="page_view",
-        timestamp=now - timedelta(minutes=10),
-    )
-    Event.objects.create(
-        distinct_id="stale",
-        event_name="page_view",
-        timestamp=now - timedelta(minutes=45),
-    )
 
-    response = client.get("/api/insights?lookback_minutes=999")
-
-    assert response.status_code == 200
-    assert response.json() == [
-        {"time": (now - timedelta(minutes=10)).strftime("%H:%M"), "count": 1}
-    ]
+    assert len(_get_insights(client, 999)) == 30
 
 
 @pytest.mark.django_db

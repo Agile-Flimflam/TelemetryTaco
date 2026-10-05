@@ -25,6 +25,19 @@ describe('InsightChartCard', () => {
     expect(await screen.findByText('No data available')).toBeInTheDocument()
   })
 
+  it('treats a zero-filled series as empty', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      mockJsonResponse([
+        { bucket: '2026-10-04T12:29:00Z', time: '12:29', count: 0 },
+        { bucket: '2026-10-04T12:30:00Z', time: '12:30', count: 0 },
+      ]),
+    )
+
+    renderWithProviders(<InsightChartCard lookbackMinutes={2} />)
+
+    expect(await screen.findByText('No data available')).toBeInTheDocument()
+  })
+
   it('renders an error message on request failure', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
       Promise.resolve(new Response('oops', { status: 500 })),

@@ -207,13 +207,15 @@ Plain ISO 8601 timestamps are still accepted for backward compatibility.
 
 ### `GET /api/insights?lookback_minutes=60`
 
-Returns minute buckets shaped like:
+Returns one point per minute for the last `lookback_minutes` minutes, oldest first, ending with the current minute. Minutes without events have a count of 0, so the series always has `lookback_minutes` points (capped at `MAX_INSIGHTS_LOOKBACK_MINUTES`).
 
 ```json
 [
-  { "time": "18:04", "count": 4 }
+  { "bucket": "2026-10-04T18:04:00Z", "time": "18:04", "count": 4 }
 ]
 ```
+
+`bucket` is the start of the minute in UTC; format it in the viewer's time zone. `time` is the same minute as `HH:MM` in UTC and is deprecated, kept for older clients.
 
 ### `GET /api/stats`
 

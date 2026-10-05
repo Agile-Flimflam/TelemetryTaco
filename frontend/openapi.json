@@ -374,7 +374,14 @@
       },
       "InsightDataPoint": {
         "properties": {
+          "bucket": {
+            "description": "Start of the minute, in UTC.",
+            "format": "date-time",
+            "title": "Bucket",
+            "type": "string"
+          },
           "time": {
+            "description": "Deprecated: the bucket as HH:MM in UTC. Format bucket on the client instead.",
             "title": "Time",
             "type": "string"
           },
@@ -384,6 +391,7 @@
           }
         },
         "required": [
+          "bucket",
           "time",
           "count"
         ],
