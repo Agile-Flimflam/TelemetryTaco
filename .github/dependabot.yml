@@ -4,15 +4,28 @@ updates:
     directory: /backend
     schedule:
       interval: weekly
+    ignore:
+      # kombu (Celery's broker layer) requires redis<6.5.
+      - dependency-name: redis
+        versions: [">=6.5"]
     groups:
       backend-minor-and-patch:
         update-types: [minor, patch]
+      backend-dev-majors:
+        dependency-type: development
+        update-types: [major]
 
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    # Packages that must move together share a group, so their majors arrive as
+    # one PR instead of separate PRs that each fail CI on their own.
     groups:
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      vite-and-vitest:
+        patterns: ["vite", "vitest", "@vitest/*", "@vitejs/*"]
       frontend-minor-and-patch:
         update-types: [minor, patch]
 
