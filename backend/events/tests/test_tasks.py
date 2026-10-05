@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from events.models import Event
 from events.tasks import process_event_batch_task
+from events.tests.factories import make_event
 
 
 @pytest.mark.django_db
@@ -35,7 +36,7 @@ def test_process_event_batch_task_ignores_duplicate_event_uuids():
 @pytest.mark.django_db
 def test_process_event_batch_task_counts_only_newly_inserted_events():
     existing_uuid = str(uuid4())
-    Event.objects.create(distinct_id="user-1", event_name="page_view", uuid=existing_uuid)
+    make_event(uuid=existing_uuid)
     payload = [
         {"distinct_id": "user-1", "event_name": "page_view", "event_uuid": existing_uuid},
         {"distinct_id": "user-2", "event_name": "page_view", "event_uuid": str(uuid4())},
