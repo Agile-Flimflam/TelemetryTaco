@@ -39,14 +39,17 @@ export default defineConfig({
     rolldownOptions: {
       output: {
         codeSplitting: {
+          // A group also pulls in its dependencies, and the first group to reach a module
+          // keeps it. Recharts depends on clsx, so if recharts-vendor came before ui-vendor,
+          // clsx would land in the Recharts chunk and the entry would preload all of Recharts.
           groups: [
             { name: 'react-vendor', test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
             { name: 'query-vendor', test: /[\\/]node_modules[\\/]@tanstack[\\/](react-query|query-core)[\\/]/ },
-            { name: 'recharts-vendor', test: /[\\/]node_modules[\\/]recharts[\\/]/ },
             {
               name: 'ui-vendor',
               test: /[\\/]node_modules[\\/](class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
             },
+            { name: 'recharts-vendor', test: /[\\/]node_modules[\\/]recharts[\\/]/ },
           ],
         },
       },
