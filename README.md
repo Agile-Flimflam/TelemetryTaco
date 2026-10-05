@@ -91,13 +91,13 @@ pnpm seed:clean           # wipe and reseed events
 
 ## Backend Notes
 
-The backend defaults to development settings via `telemetry_taco.settings`.
+The backend defaults to development settings via `config.settings`.
 
 Available settings modules:
 
-- `telemetry_taco.settings.development`
-- `telemetry_taco.settings.test`
-- `telemetry_taco.settings.production`
+- `config.settings.development`
+- `config.settings.test`
+- `config.settings.production`
 
 Important environment variables:
 
@@ -114,7 +114,7 @@ Important environment variables:
 
 Rate limits are per client IP. Behind a reverse proxy or load balancer, every request arrives from the proxy's address, so all clients would share one limit. Set `TRUSTED_PROXY_COUNT` to the number of proxies in front of the backend (usually 1) and the client IP is read from `X-Forwarded-For` instead. Leave it at 0 when clients can reach the backend directly, since they could forge that header.
 
-Events older than `EVENT_RETENTION_DAYS` (0 disables it) are purged every hour by Celery beat, in chunks of `EVENT_RETENTION_DELETE_BATCH_SIZE` rows. Docker Compose runs beat as its own `beat` service, and the development worker (`pnpm dev:worker`, `make dev`, `./start.sh`) runs it embedded with `-B`. In production, run exactly one `celery -A core beat` process. You can also purge by hand:
+Events older than `EVENT_RETENTION_DAYS` (0 disables it) are purged every hour by Celery beat, in chunks of `EVENT_RETENTION_DELETE_BATCH_SIZE` rows. Docker Compose runs beat as its own `beat` service, and the development worker (`pnpm dev:worker`, `make dev`, `./start.sh`) runs it embedded with `-B`. In production, run exactly one `celery -A config beat` process. You can also purge by hand:
 
 ```bash
 cd backend
@@ -125,7 +125,7 @@ OpenAPI export is also explicit:
 
 ```bash
 cd backend
-DJANGO_SETTINGS_MODULE=telemetry_taco.settings.test poetry run python manage.py export_openapi_schema ../frontend/openapi.json
+DJANGO_SETTINGS_MODULE=config.settings.test poetry run python manage.py export_openapi_schema ../frontend/openapi.json
 ```
 
 ## Frontend Notes

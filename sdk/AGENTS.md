@@ -22,7 +22,7 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 
 ## Compatibility
 
-- The wire format must match the backend's `EventCaptureSchema` (`backend/core/api/schemas.py`). Adding a field means adding it there first, as optional.
+- The wire format must match the backend's `EventCaptureSchema` (`backend/events/api/schemas.py`). Adding a field means adding it there first, as optional.
 - Public API is `TelemetryTaco(...)`, `.capture()`, `.flush()`, `.close()` and the context manager. Keep keyword-only options backward compatible, and add new ones with defaults.
 - Supports Python 3.11+ (`datetime.UTC` is used).
 
@@ -32,7 +32,7 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 pnpm test:sdk            # quick local run from the repo root
 ```
 
-That runs pytest from `sdk/` using the backend's Poetry interpreter. Running from `sdk/` matters, because the backend's Django project is also named `telemetry_taco` and would shadow the SDK elsewhere.
+That runs pytest from `sdk/` using the backend's Poetry interpreter.
 
 CI is stricter: it installs the SDK into a clean venv and runs the tests against the installed package, on Python 3.11, 3.12 and 3.13. To reproduce that locally:
 

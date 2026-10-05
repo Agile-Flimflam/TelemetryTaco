@@ -14,7 +14,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Capture Event */
-        post: operations["core_api_events_capture_event"];
+        post: operations["events_api_events_capture_event"];
         delete?: never;
         options?: never;
         head?: never;
@@ -31,7 +31,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Capture Event Batch */
-        post: operations["core_api_events_capture_event_batch"];
+        post: operations["events_api_events_capture_event_batch"];
         delete?: never;
         options?: never;
         head?: never;
@@ -46,7 +46,7 @@ export interface paths {
             cookie?: never;
         };
         /** List Events */
-        get: operations["core_api_events_list_events"];
+        get: operations["events_api_events_list_events"];
         put?: never;
         post?: never;
         delete?: never;
@@ -63,7 +63,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Event Insights */
-        get: operations["core_api_events_get_event_insights"];
+        get: operations["events_api_events_get_event_insights"];
         put?: never;
         post?: never;
         delete?: never;
@@ -80,7 +80,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Stats */
-        get: operations["core_api_events_get_stats"];
+        get: operations["events_api_events_get_stats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -97,7 +97,7 @@ export interface paths {
             cookie?: never;
         };
         /** Liveness */
-        get: operations["core_api_events_liveness"];
+        get: operations["events_api_events_liveness"];
         put?: never;
         post?: never;
         delete?: never;
@@ -114,7 +114,7 @@ export interface paths {
             cookie?: never;
         };
         /** Readiness */
-        get: operations["core_api_events_readiness"];
+        get: operations["events_api_events_readiness"];
         put?: never;
         post?: never;
         delete?: never;
@@ -235,7 +235,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    core_api_events_capture_event: {
+    events_api_events_capture_event: {
         parameters: {
             query?: never;
             header?: never;
@@ -259,7 +259,7 @@ export interface operations {
             };
         };
     };
-    core_api_events_capture_event_batch: {
+    events_api_events_capture_event_batch: {
         parameters: {
             query?: never;
             header?: never;
@@ -283,7 +283,7 @@ export interface operations {
             };
         };
     };
-    core_api_events_list_events: {
+    events_api_events_list_events: {
         parameters: {
             query?: {
                 limit?: number;
@@ -306,7 +306,7 @@ export interface operations {
             };
         };
     };
-    core_api_events_get_event_insights: {
+    events_api_events_get_event_insights: {
         parameters: {
             query?: {
                 lookback_minutes?: number;
@@ -328,7 +328,7 @@ export interface operations {
             };
         };
     };
-    core_api_events_get_stats: {
+    events_api_events_get_stats: {
         parameters: {
             query?: never;
             header?: never;
@@ -348,7 +348,7 @@ export interface operations {
             };
         };
     };
-    core_api_events_liveness: {
+    events_api_events_liveness: {
         parameters: {
             query?: never;
             header?: never;
@@ -368,7 +368,7 @@ export interface operations {
             };
         };
     };
-    core_api_events_readiness: {
+    events_api_events_readiness: {
         parameters: {
             query?: never;
             header?: never;
