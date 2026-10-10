@@ -2,7 +2,7 @@
 # Build from the repo root, which holds the pnpm workspace and lockfile:
 #   docker build -f frontend/Dockerfile .
 
-FROM node:24-slim AS build
+FROM node:25-slim AS build
 
 WORKDIR /app
 # pnpm 10 matches CI.
