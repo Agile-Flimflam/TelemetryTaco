@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { LiveEventStreamCard } from '@/features/events/components/live-event-stream-card'
 import { ApiHealthIndicator } from '@/features/overview/components/api-health-indicator'
 import { StatsStrip } from '@/features/overview/components/stats-strip'
 import { InsightChartCard } from '@/features/insights/components/insight-chart-card'
 import { CardErrorBoundary } from '@/shared/ui/card-error-boundary'
+import { PersonView } from '@/features/persons/components/person-view'
 
 function App() {
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(255,140,57,0.25),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(255,214,99,0.18),_transparent_24%),linear-gradient(180deg,_rgba(12,14,18,0.94),_rgba(12,14,18,1))]" />
@@ -20,18 +24,29 @@ function App() {
           <ApiHealthIndicator />
         </header>
 
-        <CardErrorBoundary title="Event summary">
-          <StatsStrip />
-        </CardErrorBoundary>
+        {selectedPersonId ? (
+          <CardErrorBoundary title="Person view">
+            <PersonView distinctId={selectedPersonId} onClose={() => setSelectedPersonId(null)} />
+          </CardErrorBoundary>
+        ) : (
+          <>
+            <CardErrorBoundary title="Event summary">
+              <StatsStrip />
+            </CardErrorBoundary>
 
-        <main className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <CardErrorBoundary title="Event insights">
-            <InsightChartCard lookbackMinutes={60} />
-          </CardErrorBoundary>
-          <CardErrorBoundary title="Live event stream">
-            <LiveEventStreamCard limit={100} />
-          </CardErrorBoundary>
-        </main>
+            <main className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+              <CardErrorBoundary title="Event insights">
+                <InsightChartCard lookbackMinutes={60} />
+              </CardErrorBoundary>
+              <CardErrorBoundary title="Live event stream">
+                <LiveEventStreamCard
+                  limit={100}
+                  onSelectPerson={(distinctId) => setSelectedPersonId(distinctId)}
+                />
+              </CardErrorBoundary>
+            </main>
+          </>
+        )}
       </div>
     </div>
   )

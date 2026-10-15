@@ -473,3 +473,47 @@ def test_readiness_returns_503_when_dependencies_are_degraded(client):
         "database": "error",
         "cache": "ok",
     }
+
+
+@pytest.mark.django_db
+def test_get_person_summary(client):
+    now = timezone.now()
+    Event.objects.create(
+        distinct_id="alice", event_name="login", timestamp=now - timedelta(hours=2)
+    )
+    Event.objects.create(
+        distinct_id="alice", event_name="page_view", timestamp=now - timedelta(hours=1)
+    )
+    Event.objects.create(distinct_id="alice", event_name="page_view", timestamp=now)
+    Event.objects.create(distinct_id="bob", event_name="login", timestamp=now)
+
+    response = client.get("/api/persons/alice")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["distinct_id"] == "alice"
+    assert data["event_count"] == 3
+    assert len(data["top_events"]) == 2
+    assert data["top_events"][0] == {"event_name": "page_view", "count": 2}
+    assert data["top_events"][1] == {"event_name": "login", "count": 1}
+
+
+@pytest.mark.django_db
+def test_list_events_for_person(client):
+    now = timezone.now()
+    Event.objects.create(
+        distinct_id="alice", event_name="login", timestamp=now - timedelta(hours=2)
+    )
+    Event.objects.create(
+        distinct_id="alice", event_name="page_view", timestamp=now - timedelta(hours=1)
+    )
+    Event.objects.create(distinct_id="bob", event_name="click", timestamp=now)
+
+    response = client.get("/api/persons/alice/events")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    assert all(e["distinct_id"] == "alice" for e in data)
+
+    # test invalid limit
+    response_bad = client.get("/api/persons/alice/events?limit=0")
+    assert response_bad.status_code == 400
