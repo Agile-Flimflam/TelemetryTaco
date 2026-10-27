@@ -6,7 +6,13 @@ TelemetryTaco is a lightweight self-hosted telemetry MVP built around three conc
 - inspect recent events in a live dashboard
 - query minute-level insight aggregates over a recent lookback window
 
-![TelemetryTaco dashboard](docs/screenshots/dashboard.png)
+![A 13-second tour of the TelemetryTaco dashboard: events stream in, the chart's tooltip reads out per-minute counts, and an event expands to show its properties](docs/assets/walkthrough.gif)
+
+<sub>[Watch it as an MP4](docs/assets/walkthrough.mp4) · [Full-size screenshot](docs/assets/dashboard@2x.png)</sub>
+
+| Minute-level insights | Event properties |
+|---|---|
+| ![Event insights chart with a tooltip showing one minute's count](docs/assets/insights@2x.png) | ![Live event stream with a checkout event expanded to show its properties](docs/assets/event-stream@2x.png) |
 
 The codebase now targets a strong single-project MVP rather than a broad PostHog clone. The refactor in this repo keeps the current API contract intact while adding real batching, idempotency, generated frontend types, tests, and a cleaner developer workflow.
 
