@@ -1,9 +1,11 @@
+import email.message
 import json
 import subprocess
 import sys
 import textwrap
 import threading
 import time
+import urllib.error
 import urllib.request
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -272,3 +274,47 @@ def test_sdk_delivers_queued_events_when_a_script_exits_without_close():
 
     assert result.returncode == 0, result.stderr.decode()
     assert [event["event_name"] for event in _RecordingHandler.received] == ["script_finished"]
+
+
+def _rate_limited(request: urllib.request.Request, retry_after: str) -> urllib.error.HTTPError:
+    headers = email.message.Message()
+    headers["Retry-After"] = retry_after
+    return urllib.error.HTTPError(request.full_url, 429, "Too Many Requests", headers, None)
+
+
+def test_sdk_retries_a_rate_limited_batch_after_retry_after():
+    attempts = []
+
+    def fake_urlopen(request, timeout):
+        attempts.append(request)
+        if len(attempts) == 1:
+            raise _rate_limited(request, "0")
+        return FakeResponse()
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        client = TelemetryTaco(flush_interval=60, batch_size=10)
+        client.capture("user-1", "page_view")
+        client.flush(timeout=2)
+        client.close(timeout=2)
+
+    assert len(attempts) == 2
+    first, second = (json.loads(request.data.decode("utf-8")) for request in attempts)
+    assert first["events"][0]["event_uuid"] == second["events"][0]["event_uuid"]
+
+
+def test_sdk_drops_a_rate_limited_batch_when_retry_after_is_too_long(caplog):
+    attempts = []
+
+    def fake_urlopen(request, timeout):
+        attempts.append(request)
+        raise _rate_limited(request, "3600")
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        client = TelemetryTaco(flush_interval=60, batch_size=10)
+        client.capture("user-1", "page_view")
+        client.flush(timeout=2)
+        client.close(timeout=2)
+
+    assert len(attempts) == 1
+    assert "rate limited; dropping 1 event(s)" in caplog.text
+    assert "retry after 3600 seconds" in caplog.text

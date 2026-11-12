@@ -1,7 +1,53 @@
 import ipaddress
+from collections.abc import Callable
+from functools import wraps
+from typing import Any
 
 from django.conf import settings
 from django.http import HttpRequest
+from django_ratelimit.core import get_usage
+
+
+class RateLimited(Exception):  # noqa: N818 - reads as the condition, like django-ratelimit's
+    def __init__(self, retry_after: int) -> None:
+        super().__init__(f"Rate limit exceeded; retry after {retry_after} seconds")
+        self.retry_after = retry_after
+
+
+def rate_limit(
+    rate_setting: str, method: str
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Limit a view per client IP, raising RateLimited when the client is over the limit.
+
+    django-ratelimit's own decorator raises PermissionDenied, which Django turns into a 403 HTML
+    page. Clients treat a 403 as a permanent rejection and drop the request, so this raises an
+    exception the API maps to a 429 with Retry-After instead.
+
+    The rate is read from the named setting on each request rather than at import, so it can be
+    overridden in tests.
+    """
+
+    def decorator(view: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(view)
+        def wrapped(request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
+            usage = get_usage(
+                request,
+                fn=view,
+                key="ip",
+                rate=getattr(settings, rate_setting),
+                method=method,
+                increment=True,
+            )
+            if usage is not None and usage["should_limit"]:
+                # django-ratelimit's window still includes the second time_left points at, so the
+                # next window opens one second later. time_left is negative when the cache is
+                # unreachable; ask for a short wait then.
+                raise RateLimited(retry_after=max(usage["time_left"] + 1, 1))
+            return view(request, *args, **kwargs)
+
+        return wrapped
+
+    return decorator
 
 
 def client_ip(request: HttpRequest) -> str:
