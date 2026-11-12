@@ -11,7 +11,7 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
   - `RuntimeError` from `capture()` after `close()`.
   - `TimeoutError` from `flush(timeout=...)` / `close(timeout=...)` when events are still unsent at the deadline.
 
-  Don't add new exceptions to this list. If you change one of them, update this section and the README.
+  Don't add new exceptions to this list. If you change one of them, update this section and `docs/sdk.md`.
 - **Never block the caller** unless the user chose `queue_full_policy="block"`. `capture()` only enqueues. Under `"block"`, it waits up to `request_timeout` for room *without* holding `_state_lock`, then logs and drops the event.
 - **Queued events survive a normal interpreter exit.** The worker is a daemon thread, so `__init__` registers an `atexit` hook that calls `close(timeout=exit_timeout)` and logs instead of raising; `close()` unregisters it. Covered by a subprocess test.
 - **The background worker must survive any failure.** One bad batch must not stop later batches (see `test_sdk_drops_failed_request_batch_without_killing_worker`).
@@ -32,7 +32,7 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 make test-sdk           # quick local run from the repo root
 ```
 
-That runs pytest from `sdk/` using the backend's Poetry interpreter.
+That runs pytest from `sdk/` using the backend's Poetry interpreter. The backend suite also runs this SDK against a live test server (`backend/events/tests/test_sdk_integration.py`), so a wire-format change that breaks either side fails there.
 
 CI is stricter: it installs the SDK into a clean venv and runs the tests against the installed package, on Python 3.11, 3.12 and 3.13. To reproduce that locally:
 

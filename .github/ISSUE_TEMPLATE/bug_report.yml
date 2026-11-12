@@ -1,0 +1,43 @@
+name: Bug report
+description: Something doesn't work the way the docs say it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The smallest set of steps, requests or code that shows it.
+      placeholder: |
+        1. make dev
+        2. curl -X POST localhost:8000/api/capture ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error output
+      render: shell
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How you're running it
+      options:
+        - make dev
+        - docker compose up (from the repo)
+        - Production images
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.2.0, or the output of git rev-parse --short HEAD
