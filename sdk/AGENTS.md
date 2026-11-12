@@ -32,7 +32,7 @@ Python client for TelemetryTaco. Read the root [`AGENTS.md`](../AGENTS.md) first
 make test-sdk           # quick local run from the repo root
 ```
 
-That runs pytest from `sdk/` using the backend's Poetry interpreter.
+That runs pytest from `sdk/` using the backend's Poetry interpreter. The backend suite also runs this SDK against a live test server (`backend/events/tests/test_sdk_integration.py`), so a wire-format change that breaks either side fails there.
 
 CI is stricter: it installs the SDK into a clean venv and runs the tests against the installed package, on Python 3.11, 3.12 and 3.13. To reproduce that locally:
 
