@@ -11,7 +11,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(255,140,57,0.25),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(255,214,99,0.18),_transparent_24%),linear-gradient(180deg,_rgba(12,14,18,0.94),_rgba(12,14,18,1))]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(255,140,57,0.25),transparent_28%),radial-gradient(circle_at_top_right,rgba(255,214,99,0.18),transparent_24%),linear-gradient(180deg,rgba(12,14,18,0.94),rgba(12,14,18,1))]" />
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-8 lg:px-10">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
