@@ -95,7 +95,9 @@ export async function apiGet<P extends GetPath>(
   } catch (error) {
     // fetch() rejects with a TypeError only when the request never got a response.
     if (error instanceof TypeError) {
-      throw new Error(`Failed to fetch ${resource}. Is the backend server running on port 8000?`)
+      throw new Error(`Failed to fetch ${resource}. Is the backend server running on port 8000?`, {
+        cause: error,
+      })
     }
     throw error
   }

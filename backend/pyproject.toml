@@ -21,7 +21,7 @@ gunicorn = "^26.2.0"
 whitenoise = "^6.12.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.16.0"
+ruff = ">=0.16,<0.18"
 bandit = {extras = ["toml"], version = "^1.7.0"}
 pytest = "^9.1.1"
 pytest-django = "^4.11.1"
