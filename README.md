@@ -45,6 +45,8 @@ Python SDK / API clients
 - `POST /api/capture`: additive single-event capture endpoint
 - `POST /api/capture/batch`: batch capture endpoint used by the SDK
 - `GET /api/events`: bounded recent-event feed with optional `before` cursor
+- `GET /api/persons/{distinct_id}`: per-person summary with first/last seen, event count and top events
+- `GET /api/persons/{distinct_id}/events`: bounded per-person event feed with `limit` and optional `before` cursor
 - `GET /api/insights`: bounded minute-level aggregate series
 - `GET /api/stats`: event count, unique `distinct_id`s and last received event for the dashboard header
 - `GET /api/health/live` and `GET /api/health/ready`
