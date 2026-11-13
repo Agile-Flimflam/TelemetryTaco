@@ -21,7 +21,7 @@ function formatRelativeTime(timestamp: string, now: number = Date.now()) {
 
 function StatTile({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-card/70 px-5 py-4 backdrop-blur">
+    <div className="rounded-2xl border border-border/70 bg-card/70 px-5 py-4 backdrop-blur-sm">
       <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground" title={title}>
         {value}
